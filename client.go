@@ -1,49 +1,52 @@
 package gosocket
 
 import (
+	"bytes"
+	"crypto/md5"
+	"encoding/base64"
+	"fmt"
 	"log"
+	"math/rand"
 	"net"
+	"time"
 
 	"github.com/plhwin/gosocket/protocol"
-
-	"github.com/gorilla/websocket"
 )
 
 type ClientFace interface {
-	Init(string, *websocket.Conn, *Server) // init the client
-	Emit(string, interface{})              // send a message to the client
-	Join(room string)                      // client join a room
-	Leave(room string)                     // client leave a room
-	Close()                                // client close
-	Id() string                            // get the client id
-	RemoteAddr() net.Addr                  // the ip:port of client
-	Conn() *websocket.Conn                 // get *websocket.Conn
-	Server() *Server                       // get *Server
-	Rooms() map[string]bool                // get all rooms joined by the client
-	Ping() map[int64]bool                  // get ping
-	Delay() int64                          // obtain a time delay that reflects the quality of the connection between the two ends
-	Out() chan string                      // get the message send channel
-	SetPing(map[int64]bool)                // set ping
-	SetDelay(int64)                        // set delay
+	Init(*Server)             // init the client
+	Emit(string, interface{}) // send a message to the client
+	Join(room string)         // client join a room
+	Leave(room string)        // client leave a room
+	LeaveAll()                // client leave all of the rooms
+	Close()                   // client close
+	Id() string               // get the client id
+	RemoteAddr() net.Addr     // the ip:port of client
+	Server() *Server          // get *Server
+	Rooms() map[string]bool   // get all rooms joined by the client
+	Ping() map[int64]bool     // get ping
+	Delay() int64             // obtain a time delay that reflects the quality of the connection between the two ends
+	Out() chan string         // get the message send channel
+	SetPing(map[int64]bool)   // set ping
+	SetDelay(int64)           // set delay
 }
 
 type Client struct {
-	id     string          // client id
-	conn   *websocket.Conn // websocket conn
-	server *Server         // event processing function register
-	rooms  map[string]bool // all rooms joined by the client, used to quickly join and leave the rooms
-	out    chan string     // message send channel
-	ping   map[int64]bool  // ping
-	delay  int64           // delay
+	id         string          // client id
+	remoteAddr net.Addr        // client remoteAddr
+	server     *Server         // event processing function register
+	rooms      map[string]bool // all rooms joined by the client, used to quickly join and leave the rooms
+	out        chan string     // message send channel
+	ping       map[int64]bool  // ping
+	delay      int64           // delay
 }
 
-func (c *Client) Init(id string, wc *websocket.Conn, s *Server) {
-	c.conn = wc
-	c.id = id
+func (c *Client) Init(s *Server) {
+	c.id = c.genId()
+	c.server = s
 	// set a capacity N for the data transmission pipeline as a buffer. if the client has not received it, the pipeline will always keep the latest N
 	c.out = make(chan string, 500)
 	c.rooms = make(map[string]bool)
-	c.server = s
 	c.ping = make(map[int64]bool)
 }
 
@@ -52,11 +55,7 @@ func (c *Client) Id() string {
 }
 
 func (c *Client) RemoteAddr() net.Addr {
-	return c.conn.RemoteAddr()
-}
-
-func (c *Client) Conn() *websocket.Conn {
-	return c.conn
+	return c.remoteAddr
 }
 
 func (c *Client) Server() *Server {
@@ -106,11 +105,6 @@ func (c *Client) Emit(event string, args interface{}) {
 	}
 }
 
-func (c *Client) Close() {
-	c.server.rooms.leaveAll <- c
-	c.conn.Close()
-}
-
 func (c *Client) Join(room string) {
 	c.server.rooms.join <- roomClient{room, c}
 	log.Println("client join room:", room, c.Id(), c.RemoteAddr())
@@ -119,4 +113,20 @@ func (c *Client) Join(room string) {
 func (c *Client) Leave(room string) {
 	c.server.rooms.leave <- roomClient{room, c}
 	log.Println("client Leave room:", room, c.Id(), c.RemoteAddr())
+}
+
+func (c *Client) LeaveAll() {
+	c.server.rooms.leaveAll <- c
+	log.Println("client Leave all of the rooms:", c.Id(), c.RemoteAddr())
+}
+
+func (c *Client) genId() string {
+	custom := c.remoteAddr.String()
+	hash := fmt.Sprintf("%s %s %n %n", custom, time.Now(), rand.Uint32(), rand.Uint32())
+	buf := bytes.NewBuffer(nil)
+	sum := md5.Sum([]byte(hash))
+	encoder := base64.NewEncoder(base64.URLEncoding, buf)
+	encoder.Write(sum[:])
+	encoder.Close()
+	return buf.String()[:20]
 }

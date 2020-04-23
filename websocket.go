@@ -1,12 +1,7 @@
 package gosocket
 
 import (
-	"bytes"
-	"crypto/md5"
-	"encoding/base64"
-	"fmt"
 	"log"
-	"math/rand"
 	"net/http"
 	"time"
 
@@ -14,6 +9,17 @@ import (
 
 	"github.com/gorilla/websocket"
 )
+
+type WebsocketClientFace interface {
+	ClientFace
+	InitWebsocket(*websocket.Conn, *Server) // init the client
+	Conn() *websocket.Conn                  // get *websocket.Conn
+}
+
+type WebsocketClient struct {
+	Client
+	conn *websocket.Conn // websocket conn
+}
 
 var upgrader = websocket.Upgrader{
 	//ReadBufferSize:  4096,
@@ -23,27 +29,41 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
+func (c *WebsocketClient) InitWebsocket(conn *websocket.Conn, s *Server) {
+	c.conn = conn
+	c.remoteAddr = c.conn.RemoteAddr()
+	c.Init(s)
+}
+
+func (c *WebsocketClient) Conn() *websocket.Conn {
+	return c.conn
+}
+
+func (c *WebsocketClient) Close() {
+	c.LeaveAll()
+	c.conn.Close()
+}
+
 // handles websocket requests from the peer.
-func ServeWs(s *Server, w http.ResponseWriter, r *http.Request, c ClientFace) {
+func ServeWs(s *Server, w http.ResponseWriter, r *http.Request, c WebsocketClientFace) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("Upgrade websocket: ", err)
 		return
 	}
 
-	id := generateClientId(conn.RemoteAddr().String())
-	c.Init(id, conn, s)
+	c.InitWebsocket(conn, s)
 
 	log.Println("new connection incoming:", c.Id(), c.RemoteAddr())
 
 	// write message to client
-	go write(c)
+	go writeWs(c)
 
 	// read message from client
-	go read(c)
+	go readWs(c)
 }
 
-func write(c ClientFace) {
+func writeWs(c WebsocketClientFace) {
 	ticker := time.NewTicker(5 * time.Second)
 	defer func() {
 		ticker.Stop()
@@ -90,7 +110,7 @@ func write(c ClientFace) {
 	}
 }
 
-func read(c ClientFace) {
+func readWs(c WebsocketClientFace) {
 	defer func() {
 		c.Close()
 	}()
@@ -102,11 +122,11 @@ func read(c ClientFace) {
 			// error reading the message, break out of the loop,
 			// the function of defer will executes the instruction to disconnect the client
 		}
-		process(c, string(msg))
+		processWs(c, string(msg))
 	}
 }
 
-func process(c ClientFace, msg string) {
+func processWs(c WebsocketClientFace, msg string) {
 	// parse the message to determine what the client connection wants to do
 	message, err := protocol.Decode(msg)
 	if err != nil {
@@ -114,14 +134,4 @@ func process(c ClientFace, msg string) {
 		return
 	}
 	c.Server().ProcessIncomingMessage(c, message)
-}
-
-func generateClientId(custom string) string {
-	hash := fmt.Sprintf("%s %s %n %n", custom, time.Now(), rand.Uint32(), rand.Uint32())
-	buf := bytes.NewBuffer(nil)
-	sum := md5.Sum([]byte(hash))
-	encoder := base64.NewEncoder(base64.URLEncoding, buf)
-	encoder.Write(sum[:])
-	encoder.Close()
-	return buf.String()[:20]
 }
