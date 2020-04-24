@@ -76,7 +76,7 @@ func writeTs(c TCPClientFace) {
 				// the hub closed the channel.
 				return
 			}
-			if _, err := c.Conn().Write([]byte(msg)); err != nil {
+			if _, err := c.Conn().Write([]byte(msg + "\n")); err != nil {
 				return
 			}
 		case <-ticker.C:
@@ -90,7 +90,7 @@ func writeTs(c TCPClientFace) {
 			timeNow := time.Now()
 			millisecond := timeNow.UnixNano() / int64(time.Millisecond)
 			if msg, err := protocol.Encode("ping", millisecond); err == nil {
-				if _, err := c.Conn().Write([]byte(msg)); err != nil {
+				if _, err := c.Conn().Write([]byte(msg + "\n")); err != nil {
 					return
 				}
 				c.Ping()[millisecond] = true
