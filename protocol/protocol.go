@@ -5,13 +5,12 @@ import (
 	"errors"
 )
 
-// 客户端发送过来的消息
 type Message struct {
-	Event string // 事件
-	Args  string // 参数
+	Event string
+	Args  string
 }
 
-// 从消息中解析出event和参数（如果参数存在）
+// Parse out events and args from the message (if args exist)
 func Decode(text string) (msg *Message, err error) {
 	var start, end, rest, countQuote int
 	msg = new(Message)
@@ -25,7 +24,7 @@ func Decode(text string) (msg *Message, err error) {
 				end = i
 				rest = i + 1
 			default:
-				err = errors.New("Wrong msg")
+				err = errors.New("wrong msg")
 				return
 			}
 			countQuote++
@@ -39,7 +38,7 @@ func Decode(text string) (msg *Message, err error) {
 		}
 	}
 	if (end < start) || (rest >= len(text)) {
-		err = errors.New("Wrong msg")
+		err = errors.New("wrong msg")
 		return
 	}
 
@@ -49,8 +48,9 @@ func Decode(text string) (msg *Message, err error) {
 	return
 }
 
-// 消息以约定协议的格式发往客户端
-// 如果想以标准格式的json串发往客户端，则args可以处理成一个map传入，如果args直接传入struct，这里会解析成空不能达成目的
+// The message is sent to the client in the format of the agreed protocol
+// The args of the event processing function cannot be a struct
+// if want json, recommended map
 func Encode(event string, args interface{}) (msg string, err error) {
 	body := "\"" + event + "\""
 	if args != nil {

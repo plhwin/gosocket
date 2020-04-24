@@ -1,7 +1,5 @@
 package gosocket
 
-import "log"
-
 type roomClient struct {
 	room   string
 	client *Client
@@ -75,7 +73,6 @@ func (r *rooms) Remove(c *Client) {
 			delete(r.clients[room], c)
 		}
 	}
-	log.Println("All rooms remove the client:", c.Id(), c.RemoteAddr())
 }
 
 // broadcast message to room
