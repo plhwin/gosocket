@@ -41,7 +41,8 @@ func (e *events) findEvent(event string) (*caller, bool) {
 	return f, ok
 }
 
-func (e *events) ProcessIncomingMessage(c ClientFace, msg *protocol.Message) {
+// call event processing function by incoming message
+func (e *events) CallEvent(c ClientFace, msg *protocol.Message) {
 	f, ok := e.findEvent(msg.Event)
 	if !ok {
 		// the system does not register a event process function,

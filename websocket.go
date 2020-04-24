@@ -133,5 +133,5 @@ func processWs(c WebsocketClientFace, msg string) {
 		log.Println("msg parse error:", err, msg)
 		return
 	}
-	c.Server().ProcessIncomingMessage(c, message)
+	c.Server().CallEvent(c, message)
 }
