@@ -1,4 +1,4 @@
-package gosocket
+package tcpsocket
 
 import (
 	"bufio"
@@ -7,37 +7,39 @@ import (
 	"strings"
 	"time"
 
+	"github.com/plhwin/gosocket"
+
 	"github.com/plhwin/gosocket/protocol"
 )
 
-type TCPClientFace interface {
-	ClientFace
-	InitTCPSocket(net.Conn, *Server) // init the client
+type ClientFace interface {
+	gosocket.ClientFace
+	init(net.Conn, *gosocket.Server) // init the client
 	Conn() net.Conn                  // get the socket conn
 }
 
-type TCPClient struct {
-	Client
+type Client struct {
+	gosocket.Client
 	conn net.Conn // tcp socket conn
 }
 
-func (c *TCPClient) InitTCPSocket(conn net.Conn, s *Server) {
+func (c *Client) init(conn net.Conn, s *gosocket.Server) {
 	c.conn = conn
-	c.remoteAddr = c.conn.RemoteAddr()
+	c.SetRemoteAddr(conn.RemoteAddr())
 	c.Init(s)
 }
 
-func (c *TCPClient) Conn() net.Conn {
+func (c *Client) Conn() net.Conn {
 	return c.conn
 }
 
-func (c *TCPClient) Close() {
+func (c *Client) Close() {
 	c.LeaveAll()
 	c.conn.Close()
 }
 
 // handles socket requests from the peer.
-func ServeTs(listener net.Listener, s *Server, c TCPClientFace) {
+func Serve(listener net.Listener, s *gosocket.Server, c ClientFace) {
 	defer listener.Close()
 	for {
 		conn, err := listener.Accept()
@@ -49,20 +51,20 @@ func ServeTs(listener net.Listener, s *Server, c TCPClientFace) {
 	}
 }
 
-func handleClient(conn net.Conn, s *Server, c TCPClientFace) {
+func handleClient(conn net.Conn, s *gosocket.Server, c ClientFace) {
 	// init tcp socket
-	c.InitTCPSocket(conn, s)
+	c.init(conn, s)
 
 	log.Println("new connection incoming:", c.Id(), c.RemoteAddr())
 
 	// write message to client
-	go writeTs(c)
+	go write(c)
 
 	// read message from client
-	go readTs(c)
+	go read(c)
 }
 
-func writeTs(c TCPClientFace) {
+func write(c ClientFace) {
 	ticker := time.NewTicker(5 * time.Second)
 	defer func() {
 		ticker.Stop()
@@ -101,7 +103,7 @@ func writeTs(c TCPClientFace) {
 	}
 }
 
-func readTs(c TCPClientFace) {
+func read(c ClientFace) {
 	defer func() {
 		c.Close()
 	}()
@@ -121,12 +123,12 @@ func readTs(c TCPClientFace) {
 		}
 
 		msg := strings.TrimSpace(string(request[:readLen]))
-		processTs(c, msg)
+		process(c, msg)
 		request = make([]byte, 1024) // clear last read content
 	}
 }
 
-func processTs(c TCPClientFace, msg string) {
+func process(c ClientFace, msg string) {
 	// parse the message to determine what the client connection wants to do
 	message, err := protocol.Decode(msg)
 	if err != nil {
@@ -137,7 +139,7 @@ func processTs(c TCPClientFace, msg string) {
 }
 
 // as a sponsor, receive message from tcp socket server
-func ReceiveTs(s *Sponsor, conn net.Conn) {
+func Receive(s *gosocket.Sponsor, conn net.Conn) {
 	reader := bufio.NewReader(conn)
 	var endByte byte = '\n'
 	for {
