@@ -12,7 +12,7 @@ import (
 type TCPClientFace interface {
 	ClientFace
 	InitTCPSocket(net.Conn, *Server) // init the client
-	Conn() net.Conn                  // get *websocket.Conn
+	Conn() net.Conn                  // get the socket conn
 }
 
 type TCPClient struct {
@@ -35,7 +35,7 @@ func (c *TCPClient) Close() {
 	c.conn.Close()
 }
 
-// handles websocket requests from the peer.
+// handles socket requests from the peer.
 func ServeTs(listener net.Listener, s *Server, c TCPClientFace) {
 	defer listener.Close()
 	for {
@@ -80,7 +80,7 @@ func writeTs(c TCPClientFace) {
 				return
 			}
 		case <-ticker.C:
-			// when the Websocket server sends `ping` messages for x consecutive times
+			// when the socket server sends `ping` messages for x consecutive times
 			// but does not receive any` pong` messages back,
 			// the server will actively disconnect from this client
 			if len(c.Ping()) >= 5 {
