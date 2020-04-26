@@ -42,7 +42,7 @@ func (e *events) findEvent(event string) (*caller, bool) {
 }
 
 // call event processing function by incoming message
-func (e *events) CallEvent(c ClientFace, msg *protocol.Message) {
+func (e *events) CallEvent(client interface{}, msg *protocol.Message) {
 	f, ok := e.findEvent(msg.Event)
 	if !ok {
 		// the system does not register a event process function,
@@ -52,7 +52,7 @@ func (e *events) CallEvent(c ClientFace, msg *protocol.Message) {
 
 	// if the registered event handler function does not have the second input parameter
 	if !f.ArgsPresent {
-		f.callFunc(c, &struct{}{})
+		f.callFunc(client, &struct{}{})
 		return
 	}
 
@@ -67,5 +67,5 @@ func (e *events) CallEvent(c ClientFace, msg *protocol.Message) {
 			// suggest that your system handles it yourself
 		}
 	}
-	f.callFunc(c, data)
+	f.callFunc(client, data)
 }

@@ -1,23 +1,25 @@
-package gosocket
+package websocket
 
 import (
 	"log"
 	"net/http"
 	"time"
 
+	"github.com/plhwin/gosocket"
+
 	"github.com/plhwin/gosocket/protocol"
 
 	"github.com/gorilla/websocket"
 )
 
-type WebsocketClientFace interface {
-	ClientFace
-	InitWebsocket(*websocket.Conn, *Server) // init the client
+type ClientFace interface {
+	gosocket.ClientFace
+	init(*websocket.Conn, *gosocket.Server) // init the client
 	Conn() *websocket.Conn                  // get *websocket.Conn
 }
 
-type WebsocketClient struct {
-	Client
+type Client struct {
+	gosocket.Client
 	conn *websocket.Conn // websocket conn
 }
 
@@ -29,41 +31,41 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-func (c *WebsocketClient) InitWebsocket(conn *websocket.Conn, s *Server) {
+func (c *Client) init(conn *websocket.Conn, s *gosocket.Server) {
 	c.conn = conn
-	c.remoteAddr = c.conn.RemoteAddr()
+	c.SetRemoteAddr(conn.RemoteAddr())
 	c.Init(s)
 }
 
-func (c *WebsocketClient) Conn() *websocket.Conn {
+func (c *Client) Conn() *websocket.Conn {
 	return c.conn
 }
 
-func (c *WebsocketClient) Close() {
+func (c *Client) Close() {
 	c.LeaveAll()
 	c.conn.Close()
 }
 
-// handles websocket requests from the peer.
-func ServeWs(s *Server, w http.ResponseWriter, r *http.Request, c WebsocketClientFace) {
+// handles websocket requests from the peer
+func Serve(s *gosocket.Server, w http.ResponseWriter, r *http.Request, c ClientFace) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("Upgrade websocket: ", err)
 		return
 	}
 
-	c.InitWebsocket(conn, s)
+	c.init(conn, s)
 
 	log.Println("new connection incoming:", c.Id(), c.RemoteAddr())
 
 	// write message to client
-	go writeWs(c)
+	go write(c)
 
 	// read message from client
-	go readWs(c)
+	go read(c)
 }
 
-func writeWs(c WebsocketClientFace) {
+func write(c ClientFace) {
 	ticker := time.NewTicker(5 * time.Second)
 	defer func() {
 		ticker.Stop()
@@ -110,7 +112,7 @@ func writeWs(c WebsocketClientFace) {
 	}
 }
 
-func readWs(c WebsocketClientFace) {
+func read(c ClientFace) {
 	defer func() {
 		c.Close()
 	}()
@@ -122,11 +124,11 @@ func readWs(c WebsocketClientFace) {
 			// error reading the message, break out of the loop,
 			// the function of defer will executes the instruction to disconnect the client
 		}
-		processWs(c, string(msg))
+		process(c, string(msg))
 	}
 }
 
-func processWs(c WebsocketClientFace, msg string) {
+func process(c ClientFace, msg string) {
 	// parse the message to determine what the client connection wants to do
 	message, err := protocol.Decode(msg)
 	if err != nil {

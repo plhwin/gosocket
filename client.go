@@ -29,6 +29,7 @@ type ClientFace interface {
 	Out() chan string         // get the message send channel
 	SetPing(map[int64]bool)   // set ping
 	SetDelay(int64)           // set delay
+	SetRemoteAddr(net.Addr)   // set remoteAddr
 }
 
 type Client struct {
@@ -84,6 +85,10 @@ func (c *Client) SetPing(v map[int64]bool) {
 
 func (c *Client) SetDelay(v int64) {
 	c.delay = v
+}
+
+func (c *Client) SetRemoteAddr(v net.Addr) {
+	c.remoteAddr = v
 }
 
 func (c *Client) Emit(event string, args interface{}) {

@@ -1,6 +1,7 @@
 package gosocket
 
 import (
+	"bufio"
 	"log"
 	"net"
 	"strings"
@@ -133,4 +134,25 @@ func processTs(c TCPClientFace, msg string) {
 		return
 	}
 	c.Server().CallEvent(c, message)
+}
+
+// as a sponsor, receive message from tcp socket server
+func ReceiveTs(s *Sponsor, conn net.Conn) {
+	reader := bufio.NewReader(conn)
+	var endByte byte = '\n'
+	for {
+		msg, err := reader.ReadString(endByte)
+		if err != nil {
+			log.Println("ReadTCP error:", err)
+			break
+		}
+		// parse the message to determine what the client connection wants to do
+		msg = strings.Replace(msg, string([]byte{endByte}), "", -1)
+		message, err := protocol.Decode(msg)
+		if err != nil {
+			log.Println("msg parse error:", err, msg)
+			continue
+		}
+		s.CallEvent(conn, message)
+	}
 }
