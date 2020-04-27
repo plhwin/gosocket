@@ -30,7 +30,8 @@ func (c *Client) init(conn net.Conn, s *gosocket.Server) {
 }
 
 func (c *Client) Close() {
-	c.LeaveAll()
+	c.LeaveServer()
+	c.LeaveAllRooms()
 	c.conn.Close()
 }
 
