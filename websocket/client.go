@@ -15,7 +15,8 @@ import (
 type ClientFace interface {
 	gosocket.ClientFace
 	init(*websocket.Conn, *gosocket.Server) // init the client
-	Conn() *websocket.Conn                  // get *websocket.Conn
+	read(ClientFace)
+	write()
 }
 
 type Client struct {
@@ -37,10 +38,6 @@ func (c *Client) init(conn *websocket.Conn, s *gosocket.Server) {
 	c.Init(s)
 }
 
-func (c *Client) Conn() *websocket.Conn {
-	return c.conn
-}
-
 func (c *Client) Close() {
 	c.LeaveAll()
 	c.conn.Close()
@@ -59,17 +56,17 @@ func Serve(s *gosocket.Server, w http.ResponseWriter, r *http.Request, c ClientF
 	log.Println("new connection incoming:", c.Id(), c.RemoteAddr())
 
 	// write message to client
-	go write(c)
+	go c.write()
 
 	// read message from client
-	go read(c)
+	go c.read(c)
 }
 
-func write(c ClientFace) {
+func (c *Client) write() {
 	ticker := time.NewTicker(5 * time.Second)
 	defer func() {
 		ticker.Stop()
-		c.Conn().Close()
+		c.conn.Close()
 		// the data transmission channel (c.Out) is not closed here,
 		// it will be handled uniformly by read method
 	}()
@@ -79,10 +76,10 @@ func write(c ClientFace) {
 			//c.Conn().SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// the hub closed the channel.
-				c.Conn().WriteMessage(websocket.CloseMessage, []byte{})
+				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
-			if err := c.Conn().WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
+			if err := c.conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
 				return
 			}
 		case <-ticker.C:
@@ -96,13 +93,13 @@ func write(c ClientFace) {
 			// the server will actively disconnect from this client
 			if len(c.Ping()) >= 5 {
 				// close the connection
-				c.Conn().WriteMessage(websocket.CloseMessage, []byte{})
+				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
 			timeNow := time.Now()
 			millisecond := timeNow.UnixNano() / int64(time.Millisecond)
 			if msg, err := protocol.Encode("ping", millisecond); err == nil {
-				if err := c.Conn().WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
+				if err := c.conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
 					return
 				}
 				c.Ping()[millisecond] = true
@@ -112,28 +109,28 @@ func write(c ClientFace) {
 	}
 }
 
-func read(c ClientFace) {
+func (c *Client) read(face ClientFace) {
 	defer func() {
 		c.Close()
 	}()
 	for {
-		_, msg, err := c.Conn().ReadMessage()
+		_, msg, err := c.conn.ReadMessage()
 		if err != nil {
 			log.Println("client go away:", err, c.Id(), c.RemoteAddr())
 			break
 			// error reading the message, break out of the loop,
 			// the function of defer will executes the instruction to disconnect the client
 		}
-		process(c, string(msg))
+		c.process(face, string(msg))
 	}
 }
 
-func process(c ClientFace, msg string) {
+func (c *Client) process(face ClientFace, msg string) {
 	// parse the message to determine what the client connection wants to do
 	message, err := protocol.Decode(msg)
 	if err != nil {
 		log.Println("msg parse error:", err, msg)
 		return
 	}
-	c.Server().CallEvent(c, message)
+	c.Server().CallEvent(face, message)
 }

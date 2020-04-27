@@ -1,7 +1,6 @@
 package tcpsocket
 
 import (
-	"bufio"
 	"log"
 	"net"
 	"strings"
@@ -15,7 +14,8 @@ import (
 type ClientFace interface {
 	gosocket.ClientFace
 	init(net.Conn, *gosocket.Server) // init the client
-	Conn() net.Conn                  // get the socket conn
+	read(ClientFace)
+	write()
 }
 
 type Client struct {
@@ -27,10 +27,6 @@ func (c *Client) init(conn net.Conn, s *gosocket.Server) {
 	c.conn = conn
 	c.SetRemoteAddr(conn.RemoteAddr())
 	c.Init(s)
-}
-
-func (c *Client) Conn() net.Conn {
-	return c.conn
 }
 
 func (c *Client) Close() {
@@ -58,17 +54,17 @@ func handleClient(conn net.Conn, s *gosocket.Server, c ClientFace) {
 	log.Println("new connection incoming:", c.Id(), c.RemoteAddr())
 
 	// write message to client
-	go write(c)
+	go c.write()
 
 	// read message from client
-	go read(c)
+	go c.read(c)
 }
 
-func write(c ClientFace) {
+func (c *Client) write() {
 	ticker := time.NewTicker(5 * time.Second)
 	defer func() {
 		ticker.Stop()
-		c.Conn().Close()
+		c.conn.Close()
 		// the data transmission channel (c.Out) is not closed here,
 		// it will be handled uniformly by read method
 	}()
@@ -79,7 +75,7 @@ func write(c ClientFace) {
 				// the hub closed the channel.
 				return
 			}
-			if _, err := c.Conn().Write([]byte(msg + "\n")); err != nil {
+			if _, err := c.conn.Write([]byte(msg + "\n")); err != nil {
 				return
 			}
 		case <-ticker.C:
@@ -93,7 +89,7 @@ func write(c ClientFace) {
 			timeNow := time.Now()
 			millisecond := timeNow.UnixNano() / int64(time.Millisecond)
 			if msg, err := protocol.Encode("ping", millisecond); err == nil {
-				if _, err := c.Conn().Write([]byte(msg + "\n")); err != nil {
+				if _, err := c.conn.Write([]byte(msg + "\n")); err != nil {
 					return
 				}
 				c.Ping()[millisecond] = true
@@ -103,13 +99,13 @@ func write(c ClientFace) {
 	}
 }
 
-func read(c ClientFace) {
+func (c *Client) read(face ClientFace) {
 	defer func() {
 		c.Close()
 	}()
 	request := make([]byte, 1024) // set maximum request length to 128B to prevent flood attack
 	for {
-		readLen, err := c.Conn().Read(request)
+		readLen, err := c.conn.Read(request)
 		if err != nil {
 			log.Println("client go away:", err, c.Id(), c.RemoteAddr())
 			break
@@ -123,38 +119,17 @@ func read(c ClientFace) {
 		}
 
 		msg := strings.TrimSpace(string(request[:readLen]))
-		process(c, msg)
+		c.process(face, msg)
 		request = make([]byte, 1024) // clear last read content
 	}
 }
 
-func process(c ClientFace, msg string) {
+func (c *Client) process(face ClientFace, msg string) {
 	// parse the message to determine what the client connection wants to do
 	message, err := protocol.Decode(msg)
 	if err != nil {
 		log.Println("msg parse error:", err, msg)
 		return
 	}
-	c.Server().CallEvent(c, message)
-}
-
-// as a sponsor, receive message from tcp socket server
-func Receive(s *gosocket.Sponsor, conn net.Conn) {
-	reader := bufio.NewReader(conn)
-	var endByte byte = '\n'
-	for {
-		msg, err := reader.ReadString(endByte)
-		if err != nil {
-			log.Println("ReadTCP error:", err)
-			break
-		}
-		// parse the message to determine what the client connection wants to do
-		msg = strings.Replace(msg, string([]byte{endByte}), "", -1)
-		message, err := protocol.Decode(msg)
-		if err != nil {
-			log.Println("msg parse error:", err, msg)
-			continue
-		}
-		s.CallEvent(conn, message)
-	}
+	c.Server().CallEvent(face, message)
 }
