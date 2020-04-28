@@ -33,7 +33,9 @@ func (s *Sponsor) Alive() bool {
 }
 
 func (s *Sponsor) Emit(event string, args interface{}) {
-	s.conn.Emit(event, args)
+	if s.alive {
+		s.conn.Emit(event, args)
+	}
 }
 
 // After receive the gosocket.SocketId event, then call OnConnection
