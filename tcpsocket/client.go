@@ -29,15 +29,17 @@ func (c *Client) init(conn net.Conn, s *gosocket.Server) {
 	c.Init(s)
 }
 
-func (c *Client) Close() {
+func (c *Client) Close(face ClientFace) {
 	c.LeaveServer()
 	c.LeaveAllRooms()
 	c.conn.Close()
+	c.Server().CallGivenEvent(face, gosocket.OnDisconnection)
 }
 
 // handles socket requests from the peer.
 func Serve(listener net.Listener, s *gosocket.Server, c ClientFace) {
 	defer listener.Close()
+
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -51,6 +53,8 @@ func Serve(listener net.Listener, s *gosocket.Server, c ClientFace) {
 func handleClient(conn net.Conn, s *gosocket.Server, c ClientFace) {
 	// init tcp socket
 	c.init(conn, s)
+
+	c.Server().CallGivenEvent(c, gosocket.OnConnection)
 
 	// write message to client
 	go c.write()
@@ -100,7 +104,7 @@ func (c *Client) write() {
 
 func (c *Client) read(face ClientFace) {
 	defer func() {
-		c.Close()
+		c.Close(face)
 	}()
 	request := make([]byte, 1024) // set maximum request length to 128B to prevent flood attack
 	for {

@@ -10,7 +10,6 @@ import (
 type ConnFace interface {
 	Init(*Sponsor)            // init the Conn
 	Emit(string, interface{}) // send a message to the Conn
-	Close()                   // Conn close
 	Id() string               // get the Conn id
 	RemoteAddr() net.Addr     // the ip:port of Conn
 	Sponsor() *Sponsor        // get *Sponsor

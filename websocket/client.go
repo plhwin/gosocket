@@ -38,10 +38,11 @@ func (c *Client) init(conn *websocket.Conn, s *gosocket.Server) {
 	c.Init(s)
 }
 
-func (c *Client) Close() {
+func (c *Client) Close(face ClientFace) {
 	c.LeaveServer()
 	c.LeaveAllRooms()
 	c.conn.Close()
+	c.Server().CallGivenEvent(face, gosocket.OnDisconnection)
 }
 
 // handles websocket requests from the peer
@@ -53,6 +54,8 @@ func Serve(s *gosocket.Server, w http.ResponseWriter, r *http.Request, c ClientF
 	}
 
 	c.init(conn, s)
+
+	c.Server().CallGivenEvent(c, gosocket.OnConnection)
 
 	// write message to client
 	go c.write()
@@ -110,7 +113,7 @@ func (c *Client) write() {
 
 func (c *Client) read(face ClientFace) {
 	defer func() {
-		c.Close()
+		c.Close(face)
 	}()
 	for {
 		_, msg, err := c.conn.ReadMessage()

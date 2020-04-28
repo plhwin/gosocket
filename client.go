@@ -21,7 +21,6 @@ type ClientFace interface {
 	LeaveAllRooms()           // client leave all of the rooms
 	JoinServer()              // client join to server
 	LeaveServer()             // client leave server
-	Close()                   // client close
 	Id() string               // get the client id
 	RemoteAddr() net.Addr     // the ip:port of client
 	Server() *Server          // get *Server

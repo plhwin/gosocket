@@ -9,6 +9,12 @@ import (
 	"github.com/plhwin/gosocket/protocol"
 )
 
+const (
+	OnConnection    = "connection"
+	OnDisconnection = "disconnection"
+	OnError         = "error"
+)
+
 type events struct {
 	messageHandlers     map[string]*caller
 	messageHandlersLock sync.RWMutex
@@ -39,6 +45,14 @@ func (e *events) findEvent(event string) (*caller, bool) {
 
 	f, ok := e.messageHandlers[event]
 	return f, ok
+}
+
+func (e *events) CallGivenEvent(c interface{}, event string) {
+	f, ok := e.findEvent(event)
+	if !ok {
+		return
+	}
+	f.callFunc(c, &struct{}{})
 }
 
 // call event processing function by incoming message
