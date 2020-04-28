@@ -41,7 +41,7 @@ func Serve(listener net.Listener, s *gosocket.Server, c ClientFace) {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Println("listener.Accept error:", err, c)
+			log.Println("[serve][ts] listener accept error:", err, c)
 			continue
 		}
 		go handleClient(conn, s, c)
@@ -51,8 +51,6 @@ func Serve(listener net.Listener, s *gosocket.Server, c ClientFace) {
 func handleClient(conn net.Conn, s *gosocket.Server, c ClientFace) {
 	// init tcp socket
 	c.init(conn, s)
-
-	log.Println("new connection incoming:", c.Id(), c.RemoteAddr())
 
 	// write message to client
 	go c.write()
@@ -95,7 +93,7 @@ func (c *Client) write() {
 				}
 				c.Ping()[millisecond] = true
 			}
-			log.Println("heartbeat:", c.Id(), c.RemoteAddr(), millisecond, timeNow.Format("2006-01-02 15:04:05.999"), c.Delay())
+			log.Println("[heartbeat][ts][ping]:", c.Id(), c.RemoteAddr(), millisecond, timeNow.Format("2006-01-02 15:04:05.999"), c.Delay())
 		}
 	}
 }
@@ -108,14 +106,14 @@ func (c *Client) read(face ClientFace) {
 	for {
 		readLen, err := c.conn.Read(request)
 		if err != nil {
-			log.Println("client go away:", err, c.Id(), c.RemoteAddr())
+			log.Println("[client][ts] go away:", err, c.Id(), c.RemoteAddr())
 			break
 			// error reading the message, break out of the loop,
 			// the function of defer will executes the instruction to disconnect the client
 		}
 
 		if readLen == 0 {
-			log.Println("connection already closed by client", readLen)
+			log.Println("[client][ts] connection already closed by client", readLen)
 			break // connection already closed by client
 		}
 
@@ -129,7 +127,7 @@ func (c *Client) process(face ClientFace, msg string) {
 	// parse the message to determine what the client connection wants to do
 	message, err := protocol.Decode(msg)
 	if err != nil {
-		log.Println("msg parse error:", err, msg)
+		log.Println("[client][ts] msg parse error:", err, msg)
 		return
 	}
 	c.Server().CallEvent(face, message)

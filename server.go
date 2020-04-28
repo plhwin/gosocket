@@ -33,11 +33,11 @@ func (s *Server) admClients() {
 		select {
 		case c := <-s.join:
 			s.clients[c.Id()] = c
-			log.Println("clients add to server:", c.Id(), c.RemoteAddr())
+			log.Println("a new client add to server:", c.Id(), c.RemoteAddr())
 		case c := <-s.leave:
 			if _, ok := s.clients[c.Id()]; ok {
 				delete(s.clients, c.Id())
-				log.Println("clients leave from server:", c.Id(), c.RemoteAddr())
+				log.Println("the client leave from server:", c.Id(), c.RemoteAddr())
 			}
 		}
 	}
@@ -50,4 +50,16 @@ func (s *Server) initRooms() {
 
 func (s *Server) BroadcastTo(room, event string, args interface{}) {
 	s.rooms.BroadcastTo(room, event, args)
+}
+
+func (s *Server) BroadcastToAll(event string, args interface{}) {
+	for _, client := range s.clients {
+		client.Emit(event, args)
+	}
+}
+
+func (s *Server) Emit(id, event string, args interface{}) {
+	if client, ok := s.clients[id]; ok {
+		client.Emit(event, args)
+	}
 }
