@@ -36,7 +36,7 @@ func (c *Conn) Close(face ConnFace) {
 // as a sponsor, receive message from tcp socket server
 func Receive(s *gosocket.Sponsor, conn net.Conn, c ConnFace) {
 	c.init(conn, s)
-	c.Sponsor().CallGivenEvent(c, gosocket.OnConnection)
+	// After receive the gosocket.SocketId event, then call OnConnection, see sponsor.go
 	go c.write()
 	go c.read(c)
 }

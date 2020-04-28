@@ -12,12 +12,21 @@ import (
 const (
 	OnConnection    = "connection"
 	OnDisconnection = "disconnection"
-	OnError         = "error"
+	EventSocketId   = "socketId"
+	EventPing       = "ping"
+	EventPong       = "pong"
 )
+
+/**
+System handler function for internal event processing
+*/
+type systemHandler func(c interface{})
 
 type events struct {
 	messageHandlers     map[string]*caller
 	messageHandlersLock sync.RWMutex
+	onConnection        systemHandler
+	onDisconnection     systemHandler
 }
 
 func (e *events) initEvents() {
@@ -48,6 +57,12 @@ func (e *events) findEvent(event string) (*caller, bool) {
 }
 
 func (e *events) CallGivenEvent(c interface{}, event string) {
+	if e.onConnection != nil && event == OnConnection {
+		e.onConnection(c)
+	}
+	if e.onDisconnection != nil && event == OnDisconnection {
+		e.onDisconnection(c)
+	}
 	f, ok := e.findEvent(event)
 	if !ok {
 		return
