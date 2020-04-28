@@ -2,10 +2,10 @@ package gosocket
 
 import "time"
 
-func NewSponsor(c ConnFace) (s *Sponsor) {
+func NewSponsor() (s *Sponsor) {
 	s = new(Sponsor)
 	s.initEvents()
-	s.conn = c
+	s.onDisconnection = s.onDisConn
 
 	s.On(EventSocketId, s.socketId)
 	s.On(EventPing, s.ping)
@@ -15,7 +15,21 @@ func NewSponsor(c ConnFace) (s *Sponsor) {
 
 type Sponsor struct {
 	events
-	conn ConnFace
+	conn  ConnFace
+	alive bool
+}
+
+func (s *Sponsor) SetConn(c ConnFace) {
+	s.conn = c
+	s.alive = true
+}
+
+func (s *Sponsor) onDisConn(interface{}) {
+	s.alive = false
+}
+
+func (s *Sponsor) Alive() bool {
+	return s.alive
 }
 
 func (s *Sponsor) Emit(event string, args interface{}) {
