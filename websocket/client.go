@@ -14,7 +14,7 @@ import (
 
 type ClientFace interface {
 	gosocket.ClientFace
-	init(*websocket.Conn, *gosocket.Server) // init the client
+	init(*websocket.Conn, *gosocket.Acceptor) // init the client
 	read(ClientFace)
 	write()
 }
@@ -32,30 +32,30 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-func (c *Client) init(conn *websocket.Conn, s *gosocket.Server) {
+func (c *Client) init(conn *websocket.Conn, a *gosocket.Acceptor) {
 	c.conn = conn
 	c.SetRemoteAddr(conn.RemoteAddr())
-	c.Init(s)
+	c.Init(a)
 }
 
 func (c *Client) Close(face ClientFace) {
-	c.LeaveServer()
+	c.LeaveAcceptor()
 	c.LeaveAllRooms()
 	c.conn.Close()
-	c.Server().CallGivenEvent(face, gosocket.OnDisconnection)
+	c.Acceptor().CallGivenEvent(face, gosocket.OnDisconnection)
 }
 
 // handles websocket requests from the peer
-func Serve(s *gosocket.Server, w http.ResponseWriter, r *http.Request, c ClientFace) {
+func Serve(a *gosocket.Acceptor, w http.ResponseWriter, r *http.Request, c ClientFace) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("[upgrade][ws] error: ", err)
 		return
 	}
 
-	c.init(conn, s)
+	c.init(conn, a)
 
-	c.Server().CallGivenEvent(c, gosocket.OnConnection)
+	c.Acceptor().CallGivenEvent(c, gosocket.OnConnection)
 
 	// write message to client
 	go c.write()
@@ -134,5 +134,5 @@ func (c *Client) process(face ClientFace, msg string) {
 		log.Println("[client][ws] msg parse error:", err, msg)
 		return
 	}
-	c.Server().CallEvent(face, message)
+	c.Acceptor().CallEvent(face, message)
 }

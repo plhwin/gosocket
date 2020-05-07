@@ -13,7 +13,7 @@ import (
 
 type ClientFace interface {
 	gosocket.ClientFace
-	init(net.Conn, *gosocket.Server) // init the client
+	init(net.Conn, *gosocket.Acceptor) // init the client
 	read(ClientFace)
 	write()
 }
@@ -23,21 +23,21 @@ type Client struct {
 	conn net.Conn // tcp socket conn
 }
 
-func (c *Client) init(conn net.Conn, s *gosocket.Server) {
+func (c *Client) init(conn net.Conn, s *gosocket.Acceptor) {
 	c.conn = conn
 	c.SetRemoteAddr(conn.RemoteAddr())
 	c.Init(s)
 }
 
 func (c *Client) Close(face ClientFace) {
-	c.LeaveServer()
+	c.LeaveAcceptor()
 	c.LeaveAllRooms()
 	c.conn.Close()
-	c.Server().CallGivenEvent(face, gosocket.OnDisconnection)
+	c.Acceptor().CallGivenEvent(face, gosocket.OnDisconnection)
 }
 
 // handles socket requests from the peer.
-func Serve(listener net.Listener, s *gosocket.Server, c ClientFace) {
+func Serve(listener net.Listener, a *gosocket.Acceptor, c ClientFace) {
 	defer listener.Close()
 
 	for {
@@ -46,15 +46,15 @@ func Serve(listener net.Listener, s *gosocket.Server, c ClientFace) {
 			log.Println("[serve][ts] listener accept error:", err, c)
 			continue
 		}
-		go handleClient(conn, s, c)
+		go handleClient(conn, a, c)
 	}
 }
 
-func handleClient(conn net.Conn, s *gosocket.Server, c ClientFace) {
+func handleClient(conn net.Conn, a *gosocket.Acceptor, c ClientFace) {
 	// init tcp socket
-	c.init(conn, s)
+	c.init(conn, a)
 
-	c.Server().CallGivenEvent(c, gosocket.OnConnection)
+	c.Acceptor().CallGivenEvent(c, gosocket.OnConnection)
 
 	// write message to client
 	go c.write()
@@ -134,5 +134,5 @@ func (c *Client) process(face ClientFace, msg string) {
 		log.Println("[client][ts] msg parse error:", err, msg)
 		return
 	}
-	c.Server().CallEvent(face, message)
+	c.Acceptor().CallEvent(face, message)
 }

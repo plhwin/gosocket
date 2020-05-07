@@ -14,16 +14,16 @@ import (
 )
 
 type ClientFace interface {
-	Init(*Server)             // init the client
+	Init(*Acceptor)           // init the client
 	Emit(string, interface{}) // send a message to the client
 	Join(room string)         // client join a room
 	Leave(room string)        // client leave a room
 	LeaveAllRooms()           // client leave all of the rooms
-	JoinServer()              // client join to server
-	LeaveServer()             // client leave server
+	JoinAcceptor()            // client join to acceptor
+	LeaveAcceptor()           // client leave acceptor
 	Id() string               // get the client id
 	RemoteAddr() net.Addr     // the ip:port of client
-	Server() *Server          // get *Server
+	Acceptor() *Acceptor      // get *Acceptor
 	Rooms() map[string]bool   // get all rooms joined by the client
 	Ping() map[int64]bool     // get ping
 	Delay() int64             // obtain a time delay that reflects the quality of the connection between the two ends
@@ -36,22 +36,22 @@ type ClientFace interface {
 type Client struct {
 	id         string          // client id
 	remoteAddr net.Addr        // client remoteAddr
-	server     *Server         // event processing function register
+	acceptor   *Acceptor       // event processing function register
 	rooms      map[string]bool // all rooms joined by the client, used to quickly join and leave the rooms
 	out        chan string     // message send channel
 	ping       map[int64]bool  // ping
 	delay      int64           // delay
 }
 
-func (c *Client) Init(s *Server) {
+func (c *Client) Init(a *Acceptor) {
 	c.id = c.genId()
-	c.server = s
+	c.acceptor = a
 	// set a capacity N for the data transmission pipeline as a buffer. if the client has not received it, the pipeline will always keep the latest N
 	c.out = make(chan string, 500)
 	c.rooms = make(map[string]bool)
 	c.ping = make(map[int64]bool)
 
-	c.JoinServer()
+	c.JoinAcceptor()
 }
 
 func (c *Client) Id() string {
@@ -62,8 +62,8 @@ func (c *Client) RemoteAddr() net.Addr {
 	return c.remoteAddr
 }
 
-func (c *Client) Server() *Server {
-	return c.server
+func (c *Client) Acceptor() *Acceptor {
+	return c.acceptor
 }
 
 func (c *Client) Rooms() map[string]bool {
@@ -109,31 +109,31 @@ func (c *Client) Emit(event string, args interface{}) {
 		// may be the current network connection is of poor quality,
 		// remove the client from all rooms,
 		// And close the data transmission channel.(let the client re-initiate a new connection)
-		c.server.rooms.leaveAll <- c
+		c.acceptor.rooms.leaveAll <- c
 	}
 }
 
 func (c *Client) Join(room string) {
-	c.server.rooms.join <- roomClient{room, c}
+	c.acceptor.rooms.join <- roomClient{room, c}
 	log.Println("client join room:", room, c.Id(), c.RemoteAddr())
 }
 
 func (c *Client) Leave(room string) {
-	c.server.rooms.leave <- roomClient{room, c}
+	c.acceptor.rooms.leave <- roomClient{room, c}
 	log.Println("client Leave room:", room, c.Id(), c.RemoteAddr())
 }
 
 func (c *Client) LeaveAllRooms() {
-	c.server.rooms.leaveAll <- c
+	c.acceptor.rooms.leaveAll <- c
 	log.Println("client Leave all of the rooms:", c.Id(), c.RemoteAddr())
 }
 
-func (c *Client) JoinServer() {
-	c.server.join <- c
+func (c *Client) JoinAcceptor() {
+	c.acceptor.join <- c
 }
 
-func (c *Client) LeaveServer() {
-	c.server.leave <- c
+func (c *Client) LeaveAcceptor() {
+	c.acceptor.leave <- c
 }
 
 func (c *Client) genId() string {

@@ -12,7 +12,7 @@ import (
 
 type ConnFace interface {
 	gosocket.ConnFace
-	init(net.Conn, *gosocket.Sponsor) // init the conn
+	init(net.Conn, *gosocket.Initiator) // init the conn
 	read(ConnFace)
 	write()
 }
@@ -22,21 +22,21 @@ type Conn struct {
 	conn net.Conn // tcp socket conn
 }
 
-func (c *Conn) init(conn net.Conn, s *gosocket.Sponsor) {
+func (c *Conn) init(conn net.Conn, i *gosocket.Initiator) {
 	c.conn = conn
 	c.SetRemoteAddr(conn.RemoteAddr())
-	c.Init(s)
+	c.Init(i)
 }
 
 func (c *Conn) Close(face ConnFace) {
 	c.conn.Close()
-	c.Sponsor().CallGivenEvent(face, gosocket.OnDisconnection)
+	c.Initiator().CallGivenEvent(face, gosocket.OnDisconnection)
 }
 
-// as a sponsor, receive message from tcp socket server
-func Receive(s *gosocket.Sponsor, conn net.Conn, c ConnFace) {
-	c.init(conn, s)
-	// After receive the gosocket.SocketId event, then call OnConnection, see sponsor.go
+// as a initiator, receive message from tcp socket server
+func Receive(i *gosocket.Initiator, conn net.Conn, c ConnFace) {
+	c.init(conn, i)
+	// After receive the SocketId event, then call OnConnection, see sponsor.go
 	go c.write()
 	go c.read(c)
 }
@@ -59,7 +59,7 @@ func (c *Conn) read(face ConnFace) {
 			continue
 		}
 		// bind function handler
-		c.Sponsor().CallEvent(face, message)
+		c.Initiator().CallEvent(face, message)
 	}
 }
 
