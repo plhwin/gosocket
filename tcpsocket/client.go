@@ -1,6 +1,7 @@
 package tcpsocket
 
 import (
+	"bufio"
 	"log"
 	"net"
 	"strings"
@@ -106,33 +107,24 @@ func (c *Client) read(face ClientFace) {
 	defer func() {
 		c.Close(face)
 	}()
-	request := make([]byte, 1024) // set maximum request length to 128B to prevent flood attack
+	// tcp sticky packet: use bufio NewReader, specific characters \n separated
+	reader := bufio.NewReader(c.conn)
+	var end byte = '\n'
 	for {
-		readLen, err := c.conn.Read(request)
+		msg, err := reader.ReadString(end)
 		if err != nil {
 			log.Println("[client][ts] go away:", err, c.Id(), c.RemoteAddr())
 			break
-			// error reading the message, break out of the loop,
-			// the function of defer will executes the instruction to disconnect the client
+		}
+		// parse the message to determine what the client connection wants to do
+		msg = strings.Replace(msg, string([]byte{end}), "", -1)
+		message, err := protocol.Decode(msg)
+		if err != nil {
+			log.Println("[client][ts] msg parse error:", err, c.Id(), c.RemoteAddr(), msg)
+			continue
 		}
 
-		if readLen == 0 {
-			log.Println("[client][ts] connection already closed by client", readLen)
-			break // connection already closed by client
-		}
-
-		msg := strings.TrimSpace(string(request[:readLen]))
-		c.process(face, msg)
-		request = make([]byte, 1024) // clear last read content
+		// bind function handler
+		c.Acceptor().CallEvent(face, message)
 	}
-}
-
-func (c *Client) process(face ClientFace, msg string) {
-	// parse the message to determine what the client connection wants to do
-	message, err := protocol.Decode(msg)
-	if err != nil {
-		log.Println("[client][ts] msg parse error:", err, msg)
-		return
-	}
-	c.Acceptor().CallEvent(face, message)
 }

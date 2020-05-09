@@ -24,7 +24,7 @@ func Decode(text string) (msg *Message, err error) {
 				end = i
 				rest = i + 1
 			default:
-				err = errors.New("wrong msg")
+				err = errors.New("wrong msg with quote")
 				return
 			}
 			countQuote++
@@ -38,7 +38,7 @@ func Decode(text string) (msg *Message, err error) {
 		}
 	}
 	if (end < start) || (rest >= len(text)) {
-		err = errors.New("wrong msg")
+		err = errors.New("wrong msg with len")
 		return
 	}
 
