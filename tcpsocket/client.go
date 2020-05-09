@@ -23,10 +23,10 @@ type Client struct {
 	conn net.Conn // tcp socket conn
 }
 
-func (c *Client) init(conn net.Conn, s *gosocket.Acceptor) {
+func (c *Client) init(conn net.Conn, a *gosocket.Acceptor) {
 	c.conn = conn
 	c.SetRemoteAddr(conn.RemoteAddr())
-	c.Init(s)
+	c.Init(a)
 }
 
 func (c *Client) Close(face ClientFace) {
