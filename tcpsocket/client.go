@@ -37,21 +37,8 @@ func (c *Client) Close(face ClientFace) {
 	c.Acceptor().CallGivenEvent(face, gosocket.OnDisconnection)
 }
 
-// handles socket requests from the peer.
-func Serve(listener net.Listener, a *gosocket.Acceptor, c ClientFace) {
-	defer listener.Close()
-
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			log.Println("[serve][ts] listener accept error:", err, c)
-			continue
-		}
-		go handleClient(conn, a, c)
-	}
-}
-
-func handleClient(conn net.Conn, a *gosocket.Acceptor, c ClientFace) {
+// handles socket requests from the peer
+func Serve(conn net.Conn, a *gosocket.Acceptor, c ClientFace) {
 	// init tcp socket
 	c.init(conn, a)
 
