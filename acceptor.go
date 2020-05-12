@@ -101,9 +101,11 @@ func (a *Acceptor) Emit(id, event string, args interface{}) {
 	}
 }
 
-func (a *Acceptor) GetClient(id string) ClientFace {
-	if client, ok := a.clients[id]; ok {
-		return client
-	}
-	return nil
+func (a *Acceptor) Client(id string) (c ClientFace, ok bool) {
+	c, ok = a.clients[id]
+	return
+}
+
+func (a *Acceptor) Clients() map[string]ClientFace {
+	return a.clients
 }
