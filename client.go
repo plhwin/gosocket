@@ -94,7 +94,7 @@ func (c *Client) SetRemoteAddr(v net.Addr) {
 func (c *Client) EmitByInitiator(i *Initiator, event string, args interface{}) {
 	// Similar to the OSI network model,
 	// add the socket client ID to re-packet args here, then send message to server by initiator instance
-	var req Request
+	var req ArgsRequest
 	req.Id = c.Id()
 	req.Args = args
 	// send to socket server

@@ -1,8 +1,13 @@
 package gosocket
 
-type Request struct {
+type ArgsRequest struct {
 	Id   string      `json:"id"`
 	Args interface{} `json:"args"`
+}
+
+type ArgsResponse struct {
+	Id   string   `json:"id"`
+	Args Response `json:"args"`
 }
 
 type Response struct {
@@ -44,8 +49,8 @@ func (r *response) Fail(message string) {
 }
 
 func (r *response) emit() {
-	var req Request
-	req.Id = r.identity
-	req.Args = r.Response
-	r.client.Emit(r.event, req)
+	var args ArgsResponse
+	args.Id = r.identity
+	args.Args = r.Response
+	r.client.Emit(r.event, args)
 }
