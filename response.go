@@ -23,15 +23,19 @@ type response struct {
 	Response
 }
 
-func NewResponse(client ClientFace, event, identity string) (r *response) {
+func NewResponse(client ClientFace, event string) (r *response) {
 	r = new(response)
 	r.client = client
 	r.event = event
+	return
+}
+
+func (r *response) SetIdentity(identity string) {
 	r.identity = identity
 	return
 }
 
-func (r *response) Set(message string, result bool, data interface{}) {
+func (r *response) Set(result bool, message string, data interface{}) {
 	r.Result = result
 	r.Message = message
 	r.Data = data
@@ -39,18 +43,22 @@ func (r *response) Set(message string, result bool, data interface{}) {
 }
 
 func (r *response) Success(data interface{}) {
-	r.Set("ok", true, data)
-	r.emit()
+	r.Set(true, "ok", data)
+	r.Emit()
 }
 
 func (r *response) Fail(message string) {
-	r.Set(message, false, nil)
-	r.emit()
+	r.Set(false, message, nil)
+	r.Emit()
 }
 
-func (r *response) emit() {
-	var args ArgsResponse
-	args.Id = r.identity
-	args.Args = r.Response
-	r.client.Emit(r.event, args)
+func (r *response) Emit() {
+	if r.identity == "" {
+		r.client.Emit(r.event, r.Response)
+	} else {
+		var args ArgsResponse
+		args.Id = r.identity
+		args.Args = r.Response
+		r.client.Emit(r.event, args)
+	}
 }
