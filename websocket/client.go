@@ -39,9 +39,9 @@ func (c *Client) init(conn *websocket.Conn, a *gosocket.Acceptor) {
 }
 
 func (c *Client) Close(face ClientFace) {
-	c.LeaveAcceptor()
-	c.LeaveAllRooms()
 	c.conn.Close()
+	c.LeaveAllRooms()
+	c.Acceptor().Leave(c)
 	c.Acceptor().CallGivenEvent(face, gosocket.OnDisconnection)
 }
 
@@ -55,7 +55,11 @@ func Serve(a *gosocket.Acceptor, w http.ResponseWriter, r *http.Request, c Clien
 
 	c.init(conn, a)
 
-	c.Acceptor().CallGivenEvent(c, gosocket.OnConnection)
+	// add the ClientFace to acceptor
+	a.Join(c)
+
+	// trigger the event: OnConnection
+	a.CallGivenEvent(c, gosocket.OnConnection)
 
 	// write message to client
 	go c.write()

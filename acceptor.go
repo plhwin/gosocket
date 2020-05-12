@@ -1,6 +1,7 @@
 package gosocket
 
 import (
+	"log"
 	"time"
 )
 
@@ -19,9 +20,9 @@ func NewAcceptor() (a *Acceptor) {
 type Acceptor struct {
 	events
 	rooms   *rooms
-	clients map[string]*Client
-	join    chan *Client
-	leave   chan *Client
+	clients map[string]ClientFace
+	join    chan ClientFace
+	leave   chan ClientFace
 }
 
 // the client initiate a ping and the server reply a pong
@@ -50,9 +51,9 @@ func (a *Acceptor) onConn(f interface{}) {
 }
 
 func (a *Acceptor) initClients() {
-	a.clients = make(map[string]*Client)
-	a.join = make(chan *Client)
-	a.leave = make(chan *Client)
+	a.clients = make(map[string]ClientFace)
+	a.join = make(chan ClientFace)
+	a.leave = make(chan ClientFace)
 	go a.manageClients()
 }
 
@@ -61,9 +62,11 @@ func (a *Acceptor) manageClients() {
 		select {
 		case c := <-a.join:
 			a.clients[c.Id()] = c
+			log.Println("[acceptor] join:", c.Id())
 		case c := <-a.leave:
 			if _, ok := a.clients[c.Id()]; ok {
 				delete(a.clients, c.Id())
+				log.Println("[acceptor] leave:", c.Id())
 			}
 		}
 	}
@@ -72,6 +75,14 @@ func (a *Acceptor) manageClients() {
 func (a *Acceptor) initRooms() {
 	a.rooms = newRooms()
 	go a.rooms.Run()
+}
+
+func (a *Acceptor) Join(c ClientFace) {
+	a.join <- c
+}
+
+func (a *Acceptor) Leave(c ClientFace) {
+	a.leave <- c
 }
 
 func (a *Acceptor) BroadcastTo(room, event string, args interface{}) {
@@ -88,4 +99,11 @@ func (a *Acceptor) Emit(id, event string, args interface{}) {
 	if client, ok := a.clients[id]; ok {
 		client.Emit(event, args)
 	}
+}
+
+func (a *Acceptor) GetClient(id string) ClientFace {
+	if client, ok := a.clients[id]; ok {
+		return client
+	}
+	return nil
 }

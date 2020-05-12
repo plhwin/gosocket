@@ -31,9 +31,9 @@ func (c *Client) init(conn net.Conn, a *gosocket.Acceptor) {
 }
 
 func (c *Client) Close(face ClientFace) {
-	c.LeaveAcceptor()
-	c.LeaveAllRooms()
 	c.conn.Close()
+	c.LeaveAllRooms()
+	c.Acceptor().Leave(c)
 	c.Acceptor().CallGivenEvent(face, gosocket.OnDisconnection)
 }
 
@@ -42,7 +42,11 @@ func Serve(conn net.Conn, a *gosocket.Acceptor, c ClientFace) {
 	// init tcp socket
 	c.init(conn, a)
 
-	c.Acceptor().CallGivenEvent(c, gosocket.OnConnection)
+	// add the ClientFace to acceptor
+	a.Join(c)
+
+	// trigger the event: OnConnection
+	a.CallGivenEvent(c, gosocket.OnConnection)
 
 	// write message to client
 	go c.write()

@@ -20,8 +20,6 @@ type ClientFace interface {
 	Join(room string)                                // client join a room
 	Leave(room string)                               // client leave a room
 	LeaveAllRooms()                                  // client leave all of the rooms
-	JoinAcceptor()                                   // client join to acceptor
-	LeaveAcceptor()                                  // client leave acceptor
 	Id() string                                      // get the client id
 	RemoteAddr() net.Addr                            // the ip:port of client
 	Acceptor() *Acceptor                             // get *Acceptor
@@ -51,8 +49,6 @@ func (c *Client) Init(a *Acceptor) {
 	c.out = make(chan string, 500)
 	c.rooms = make(map[string]bool)
 	c.ping = make(map[int64]bool)
-
-	c.JoinAcceptor()
 }
 
 func (c *Client) Id() string {
@@ -137,14 +133,6 @@ func (c *Client) Leave(room string) {
 func (c *Client) LeaveAllRooms() {
 	c.acceptor.rooms.leaveAll <- c
 	log.Println("client Leave all of the rooms:", c.Id(), c.RemoteAddr())
-}
-
-func (c *Client) JoinAcceptor() {
-	c.acceptor.join <- c
-}
-
-func (c *Client) LeaveAcceptor() {
-	c.acceptor.leave <- c
 }
 
 func (c *Client) genId() string {
