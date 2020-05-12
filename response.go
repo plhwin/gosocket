@@ -6,46 +6,46 @@ type Request struct {
 }
 
 type Response struct {
-	identity string
-	client   ClientFace
-	event    string
-	response
-}
-
-type response struct {
 	Result  bool        `json:"result"`
 	Message string      `json:"message"`
 	Data    interface{} `json:"data,omitempty"`
 }
 
-func NewResponse(client ClientFace, event, identity string) (r *Response) {
-	r = new(Response)
+type response struct {
+	identity string
+	client   ClientFace
+	event    string
+	Response
+}
+
+func NewResponse(client ClientFace, event, identity string) (r *response) {
+	r = new(response)
 	r.client = client
 	r.event = event
 	r.identity = identity
 	return
 }
 
-func (r *Response) Set(message string, result bool, data interface{}) {
+func (r *response) Set(message string, result bool, data interface{}) {
 	r.Result = result
 	r.Message = message
 	r.Data = data
 	return
 }
 
-func (r *Response) Success(data interface{}) {
+func (r *response) Success(data interface{}) {
 	r.Set("ok", true, data)
 	r.emit()
 }
 
-func (r *Response) Fail(message string) {
+func (r *response) Fail(message string) {
 	r.Set(message, false, nil)
 	r.emit()
 }
 
-func (r *Response) emit() {
+func (r *response) emit() {
 	var req Request
 	req.Id = r.identity
-	req.Args = r.response
+	req.Args = r.Response
 	r.client.Emit(r.event, req)
 }
