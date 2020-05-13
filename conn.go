@@ -88,6 +88,6 @@ func (c *Conn) Emit(event string, args interface{}) {
 	// transfer data without blocking
 	case c.out <- msg:
 	default:
-		log.Println("Emit send error:", c.Id(), c.RemoteAddr(), msg)
+		log.Println("conn Emit error:", c.Id(), c.RemoteAddr(), msg)
 	}
 }

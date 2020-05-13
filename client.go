@@ -111,12 +111,12 @@ func (c *Client) Emit(event string, args interface{}) {
 	// transfer data without blocking
 	case c.out <- msg:
 	default:
-		log.Println("Emit send error:", c.Id(), c.RemoteAddr(), msg)
+		log.Println("client Emit error:", c.Id(), c.RemoteAddr(), msg)
 		// the capacity of the data transmission pipeline is full,
 		// may be the current network connection is of poor quality,
 		// remove the client from all rooms,
 		// And close the data transmission channel.(let the client re-initiate a new connection)
-		c.acceptor.rooms.leaveAll <- c
+		c.LeaveAllRooms()
 	}
 }
 
