@@ -46,7 +46,7 @@ func (c *Client) Init(a *Acceptor) {
 	c.id = c.genId()
 	c.acceptor = a
 	// set a capacity N for the data transmission pipeline as a buffer. if the client has not received it, the pipeline will always keep the latest N
-	c.out = make(chan string, 500)
+	c.out = make(chan string, 200)
 	c.rooms = make(map[string]bool)
 	c.ping = make(map[int64]bool)
 }
@@ -116,7 +116,9 @@ func (c *Client) Emit(event string, args interface{}) {
 		// may be the current network connection is of poor quality,
 		// remove the client from all rooms,
 		// And close the data transmission channel.(let the client re-initiate a new connection)
-		c.LeaveAllRooms()
+		//c.LeaveAllRooms()
+
+		// @todo: in large-scale data testing, LeaveAllRooms was blocked here, need further observation and testing
 	}
 }
 
