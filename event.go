@@ -12,7 +12,7 @@ import (
 const (
 	OnConnection    = "connection"
 	OnDisconnection = "disconnection"
-	EventSocketId   = "socketId"
+	EventSocketId   = "socket:id"
 	EventPing       = "ping"
 	EventPong       = "pong"
 )

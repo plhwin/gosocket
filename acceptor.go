@@ -109,3 +109,12 @@ func (a *Acceptor) Client(id string) (c ClientFace, ok bool) {
 func (a *Acceptor) Clients() map[string]ClientFace {
 	return a.clients
 }
+
+func (a *Acceptor) ClientsByRoom(room string) (clientFaces []ClientFace) {
+	if clients, ok := a.rooms.clients[room]; ok {
+		for clientFace := range clients {
+			clientFaces = append(clientFaces, clientFace)
+		}
+	}
+	return
+}
