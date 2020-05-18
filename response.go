@@ -23,10 +23,11 @@ type response struct {
 	Response
 }
 
-func NewResponse(client ClientFace, event string) (r *response) {
+func NewResponse(client ClientFace, event, identity string) (r *response) {
 	r = new(response)
 	r.client = client
 	r.event = event
+	r.identity = identity
 	return
 }
 
