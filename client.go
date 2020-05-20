@@ -91,16 +91,6 @@ func (c *Client) SetRemoteAddr(v net.Addr) {
 	c.remoteAddr = v
 }
 
-func (c *Client) EmitByInitiator(i *Initiator, event string, args interface{}) {
-	// Similar to the OSI network model,
-	// add the socket client ID to re-packet args here, then send message to server by initiator instance
-	var req ArgsRequest
-	req.Id = c.Id()
-	req.Args = args
-	// send to socket server
-	i.Emit(event, req)
-}
-
 func (c *Client) Emit(event string, args interface{}) {
 	msg, err := protocol.Encode(event, args)
 	if err != nil {
@@ -120,6 +110,16 @@ func (c *Client) Emit(event string, args interface{}) {
 
 		// @todo: in large-scale data testing, LeaveAllRooms was blocked here, need further observation and testing
 	}
+}
+
+func (c *Client) EmitByInitiator(i *Initiator, event string, args interface{}) {
+	// Similar to the OSI network model,
+	// add the socket client ID to re-packet args here, then send message to server by initiator instance
+	var req ArgsRequest
+	req.Id = c.Id()
+	req.Args = args
+	// send to socket server
+	i.Emit(event, req)
 }
 
 func (c *Client) Join(room string) {
