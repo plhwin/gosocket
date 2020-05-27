@@ -8,6 +8,7 @@ import (
 	"log"
 	"math/rand"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/plhwin/gosocket/protocol"
@@ -33,13 +34,13 @@ type ClientFace interface {
 }
 
 type Client struct {
-	id         string          // client id
-	remoteAddr net.Addr        // client remoteAddr
-	acceptor   *Acceptor       // event processing function register
-	rooms      map[string]bool // all rooms joined by the client, used to quickly join and leave the rooms
-	out        chan string     // message send channel
-	ping       map[int64]bool  // ping
-	delay      int64           // delay
+	id         string         // client id
+	remoteAddr net.Addr       // client remoteAddr
+	acceptor   *Acceptor      // event processing function register
+	rooms      *sync.Map      // map[string]bool all rooms joined by the client, used to quickly join and leave the rooms
+	out        chan string    // message send channel
+	ping       map[int64]bool // ping
+	delay      int64          // delay
 }
 
 func (c *Client) Init(a *Acceptor) {
@@ -47,7 +48,7 @@ func (c *Client) Init(a *Acceptor) {
 	c.acceptor = a
 	// set a capacity N for the data transmission pipeline as a buffer. if the client has not received it, the pipeline will always keep the latest N
 	c.out = make(chan string, 200)
-	c.rooms = make(map[string]bool)
+	c.rooms = new(sync.Map)
 	c.ping = make(map[int64]bool)
 }
 
@@ -64,7 +65,12 @@ func (c *Client) Acceptor() *Acceptor {
 }
 
 func (c *Client) Rooms() map[string]bool {
-	return c.rooms
+	rooms := make(map[string]bool)
+	c.rooms.Range(func(k, v interface{}) bool {
+		rooms[k.(string)] = v.(bool)
+		return true
+	})
+	return rooms
 }
 
 func (c *Client) Ping() map[int64]bool {

@@ -40,15 +40,17 @@ func (r *rooms) Run() {
 				r.clients[rc.room] = make(map[*Client]bool)
 			}
 			r.clients[rc.room][rc.client] = true
-			rc.client.rooms[rc.room] = true
+			//rc.client.rooms[rc.room] = true
+			rc.client.rooms.Store(rc.room, true)
 		// client request to leave a room
 		case rc := <-r.leave:
 			// do not close the message send channel(rc.client.out) here,may be other data to be transferred
 			if _, ok := r.clients[rc.room]; ok {
 				delete(r.clients[rc.room], rc.client)
 			}
-			if _, ok := rc.client.rooms[rc.room]; ok {
-				delete(rc.client.rooms, rc.room)
+			if _, ok := rc.client.rooms.Load(rc.room); ok {
+				//delete(rc.client.rooms, rc.room)
+				rc.client.rooms.Delete(rc.room)
 			}
 		// client request to leave all of the rooms
 		case client := <-r.leaveAll:
@@ -67,12 +69,14 @@ func (r *rooms) Run() {
 // remove the client from all the rooms, and close the message send channel
 func (r *rooms) Remove(c *Client) {
 	close(c.out)
-	for room := range c.rooms {
-		delete(c.rooms, room)
+	c.rooms.Range(func(k, v interface{}) bool {
+		room := k.(string)
+		c.rooms.Delete(room)
 		if _, ok := r.clients[room][c]; ok {
 			delete(r.clients[room], c)
 		}
-	}
+		return true
+	})
 }
 
 // broadcast message to room
