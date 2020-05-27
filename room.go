@@ -40,7 +40,6 @@ func (r *rooms) Run() {
 				r.clients[rc.room] = make(map[*Client]bool)
 			}
 			r.clients[rc.room][rc.client] = true
-			//rc.client.rooms[rc.room] = true
 			rc.client.rooms.Store(rc.room, true)
 		// client request to leave a room
 		case rc := <-r.leave:
@@ -49,7 +48,6 @@ func (r *rooms) Run() {
 				delete(r.clients[rc.room], rc.client)
 			}
 			if _, ok := rc.client.rooms.Load(rc.room); ok {
-				//delete(rc.client.rooms, rc.room)
 				rc.client.rooms.Delete(rc.room)
 			}
 		// client request to leave all of the rooms
