@@ -3,54 +3,121 @@ package protocol
 import (
 	"encoding/json"
 	"errors"
+	"strings"
 )
 
 type Message struct {
 	Event string
 	Args  string
+	Id    string
 }
 
-// Parse out events and args from the message (if args exist)
-func Decode(text string) (msg *Message, err error) {
-	var start, end, rest, countQuote int
-	msg = new(Message)
+type counter struct {
+	start      int
+	end        int
+	rest       int
+	countQuote int
+}
 
-	for i, c := range text {
-		if c == '"' {
-			switch countQuote {
-			case 0:
-				start = i + 1
-			case 1:
-				end = i
-				rest = i + 1
-			default:
-				err = errors.New("wrong msg with quote")
-				return
-			}
-			countQuote++
+func (c *counter) count(i int, s int32) (done bool, err error) {
+	if s == '"' {
+		switch c.countQuote {
+		case 0:
+			c.start = i + 1
+		case 1:
+			c.end = i
+			c.rest = i + 1
+		default:
+			err = errors.New("wrong message quote")
+			return
 		}
-		if c == ',' {
-			if countQuote < 2 {
-				continue
-			}
-			rest = i + 1
+		c.countQuote++
+	}
+	if s == ',' {
+		if c.countQuote == 2 {
+			c.rest = i + 1
+			done = true
+		}
+	}
+	return
+}
+
+func cutFromLeft(text string) (left, right string, err error) {
+	var c counter
+	// loop from left to right
+	for i, s := range text {
+		var done bool
+		if done, err = c.count(i, s); err != nil {
+			return
+		}
+		if done {
 			break
 		}
 	}
-	if (end < start) || (rest >= len(text)) {
-		err = errors.New("wrong msg with len")
+	if (c.end < c.start) || (c.rest >= len(text)) {
+		err = errors.New("wrong message len")
 		return
 	}
+	left = text[c.start:c.end]
+	right = text[c.rest : len(text)-1]
+	return
+}
 
-	msg.Event = text[start:end]
-	msg.Args = text[rest : len(text)-1]
+func cutFromRight(text string) (left, right string, err error) {
+	var c counter
+	bytes := []rune(text)
+	// loop from right to left
+	for i := len(bytes) - 1; i >= 0; i-- {
+		var done bool
+		if done, err = c.count(i, bytes[i]); err != nil {
+			return
+		}
+		if done {
+			break
+		}
+	}
+	if (c.end+1 > c.start-1) || (c.rest < 0) {
+		err = errors.New("wrong message len")
+		return
+	}
+	left = string(bytes[:c.rest-1])
+	right = string(bytes[c.end+1 : c.start-1])
+	return
+}
 
+// Parse message ["$event",$args,"$identity"]
+func Decode(text string) (msg *Message, err error) {
+	msg = new(Message)
+
+	var event, args string
+	if event, args, err = cutFromLeft(text); err != nil {
+		return
+	}
+	if event == "" {
+		err = errors.New("wrong message format")
+		return
+	}
+	msg.Event = event
+	// if end with "(quote), it is possible to carry the client id
+	// it means that the data type of the client id must be a string
+	if strings.HasSuffix(args, "\"") {
+		var left, id string
+		if left, id, err = cutFromRight(args); err != nil {
+			return
+		}
+		if args == "\""+id+"\"" {
+			msg.Args = args
+		} else {
+			msg.Args = left
+			msg.Id = id
+		}
+	} else {
+		msg.Args = args
+	}
 	return
 }
 
 // The message is sent to the client in the format of the agreed protocol
-// The args of the event processing function cannot be a struct
-// if want json, recommended map
 func Encode(event string, args interface{}) (msg string, err error) {
 	body := "\"" + event + "\""
 	if args != nil {
