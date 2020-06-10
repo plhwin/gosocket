@@ -67,7 +67,7 @@ func (e *events) CallGivenEvent(c interface{}, event string) {
 	if !ok {
 		return
 	}
-	f.callFunc(c, &struct{}{})
+	f.callFunc(c, &struct{}{}, "")
 }
 
 // call event processing function by incoming message
@@ -79,22 +79,30 @@ func (e *events) CallEvent(client interface{}, msg *protocol.Message) {
 		return
 	}
 
-	// if the registered event handler function does not have the second input parameter
-	if !f.ArgsPresent {
-		f.callFunc(client, &struct{}{})
-		return
+	var args interface{}
+	var id string
+
+	if f.ArgsPresent {
+		// the second input parameter with registered event handler function
+		// the data type of the second parameter passed by the event handler function
+		args = f.getArgs()
+		if msg.Args != "" {
+			msg.Args = strings.Trim(msg.Args, " ")
+			if err := json.Unmarshal([]byte(msg.Args), &args); err != nil {
+				log.Println("json decode error:", msg.Args, args)
+				// if decode error, not return here
+				// The second parameter of the event processing function will be zero value,
+				// suggest that your system handles it yourself
+			}
+		}
+	} else {
+		args = &struct{}{}
 	}
 
-	// the data type of the second parameter passed by the event handler function
-	data := f.getArgs()
-	if msg.Args != "" {
-		msg.Args = strings.Trim(msg.Args, " ")
-		if err := json.Unmarshal([]byte(msg.Args), &data); err != nil {
-			log.Println("json decode error:", msg.Args, data)
-			// if decode error, not return here
-			// The second parameter of the event processing function will be zero value,
-			// suggest that your system handles it yourself
-		}
+	if f.IdPresent {
+		// the third input parameter with registered event handler function
+		id = msg.Id
 	}
-	f.callFunc(client, data)
+
+	f.callFunc(client, args, id)
 }

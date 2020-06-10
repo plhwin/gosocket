@@ -71,15 +71,18 @@ func (c *caller) getArgs() interface{} {
 }
 
 // calls function with given arguments from its representation using reflection
-func (c *caller) callFunc(client interface{}, args interface{}) []reflect.Value {
-	//nil is untyped, so use the default empty value of correct type
+func (c *caller) callFunc(client interface{}, args interface{}, id string) []reflect.Value {
+
+	// nil is untyped, so use the default empty value of correct type
 	if args == nil {
 		args = c.getArgs()
 	}
 
-	in := []reflect.Value{reflect.ValueOf(client), reflect.ValueOf(args).Elem()}
+	in := []reflect.Value{reflect.ValueOf(client), reflect.ValueOf(args).Elem(), reflect.ValueOf(id)}
 	if !c.ArgsPresent {
 		in = in[0:1]
+	} else if !c.IdPresent {
+		in = in[0:2]
 	}
 
 	return c.Func.Call(in)
