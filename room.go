@@ -9,6 +9,7 @@ type roomMessage struct {
 	room  string
 	event string
 	args  interface{}
+	id    string
 }
 
 // rooms maintains the set of active clients and broadcasts messages to the clients
@@ -57,7 +58,7 @@ func (r *rooms) Run() {
 		case rm := <-r.broadcast:
 			if _, ok := r.clients[rm.room]; ok {
 				for client := range r.clients[rm.room] {
-					client.Emit(rm.event, rm.args)
+					client.Emit(rm.event, rm.args, rm.id)
 				}
 			}
 		}
@@ -78,6 +79,6 @@ func (r *rooms) Remove(c *Client) {
 }
 
 // broadcast message to room
-func (r *rooms) BroadcastTo(room, event string, args interface{}) {
-	r.broadcast <- roomMessage{room, event, args}
+func (r *rooms) BroadcastTo(room, event string, args interface{}, id string) {
+	r.broadcast <- roomMessage{room, event, args, id}
 }

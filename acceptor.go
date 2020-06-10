@@ -26,8 +26,8 @@ type Acceptor struct {
 }
 
 // the client initiate a ping and the server reply a pong
-func (a *Acceptor) ping(c ClientFace, arg int64) {
-	c.Emit(EventPong, arg)
+func (a *Acceptor) ping(c ClientFace, arg int64, id string) {
+	c.Emit(EventPong, arg, id)
 	return
 }
 
@@ -47,7 +47,7 @@ func (a *Acceptor) pong(c ClientFace, arg int64) {
 // the server send the socket id to the client immediately
 func (a *Acceptor) onConn(f interface{}) {
 	c := f.(ClientFace)
-	c.Emit(EventSocketId, c.Id())
+	c.Emit(EventSocketId, c.Id(), "")
 }
 
 func (a *Acceptor) initClients() {
@@ -85,24 +85,24 @@ func (a *Acceptor) Leave(c ClientFace) {
 	a.leave <- c
 }
 
-func (a *Acceptor) BroadcastTo(room, event string, args interface{}) {
-	a.rooms.BroadcastTo(room, event, args)
+func (a *Acceptor) BroadcastTo(room, event string, args interface{}, id string) {
+	a.rooms.BroadcastTo(room, event, args, id)
 }
 
-func (a *Acceptor) BroadcastToAll(event string, args interface{}) {
+func (a *Acceptor) BroadcastToAll(event string, args interface{}, id string) {
 	for _, client := range a.clients {
-		client.Emit(event, args)
+		client.Emit(event, args, id)
 	}
 }
 
-func (a *Acceptor) Emit(id, event string, args interface{}) {
-	if client, ok := a.clients[id]; ok {
-		client.Emit(event, args)
+func (a *Acceptor) Emit(clientId, event string, args interface{}, id string) {
+	if client, ok := a.clients[clientId]; ok {
+		client.Emit(event, args, id)
 	}
 }
 
-func (a *Acceptor) Client(id string) (c ClientFace, ok bool) {
-	c, ok = a.clients[id]
+func (a *Acceptor) Client(clientId string) (c ClientFace, ok bool) {
+	c, ok = a.clients[clientId]
 	return
 }
 

@@ -32,9 +32,9 @@ func (i *Initiator) Alive() bool {
 	return i.alive
 }
 
-func (i *Initiator) Emit(event string, args interface{}) {
+func (i *Initiator) Emit(event string, args interface{}, id string) {
 	if i.alive {
-		i.conn.Emit(event, args)
+		i.conn.Emit(event, args, id)
 	}
 }
 
@@ -45,8 +45,8 @@ func (i *Initiator) socketId(c ConnFace, id string) {
 }
 
 // the server initiate a ping and the client reply a pong
-func (i *Initiator) ping(c ConnFace, arg int64) {
-	c.Emit(EventPong, arg)
+func (i *Initiator) ping(c ConnFace, arg int64, id string) {
+	c.Emit(EventPong, arg, id)
 	return
 }
 

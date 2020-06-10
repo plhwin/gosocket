@@ -17,22 +17,19 @@ type response struct {
 }
 
 type Response struct {
-	identity string
+	clientId string // client connection id
 	client   ClientFace
 	event    string
+	id       string // client transparent id
 	response
 }
 
-func NewResponse(client ClientFace, event, identity string) (r *Response) {
+func NewResponse(client ClientFace, event, clientId, id string) (r *Response) {
 	r = new(Response)
 	r.client = client
 	r.event = event
-	r.identity = identity
-	return
-}
-
-func (r *Response) SetIdentity(identity string) {
-	r.identity = identity
+	r.clientId = clientId
+	r.id = id
 	return
 }
 
@@ -54,12 +51,12 @@ func (r *Response) Fail(message string) {
 }
 
 func (r *Response) Emit() {
-	if r.identity == "" {
-		r.client.Emit(r.event, r.response)
+	if r.clientId == "" {
+		r.client.Emit(r.event, r.response, r.id)
 	} else {
 		var args ArgsResponse
-		args.Id = r.identity
+		args.Id = r.clientId
 		args.Args = r.response
-		r.client.Emit(r.event, args)
+		r.client.Emit(r.event, args, r.id)
 	}
 }

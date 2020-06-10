@@ -83,7 +83,7 @@ func (c *Client) write() {
 			}
 			timeNow := time.Now()
 			millisecond := timeNow.UnixNano() / int64(time.Millisecond)
-			if msg, err := protocol.Encode(gosocket.EventPing, millisecond); err == nil {
+			if msg, err := protocol.Encode(gosocket.EventPing, millisecond, ""); err == nil {
 				if _, err := c.conn.Write([]byte(msg + "\n")); err != nil {
 					return
 				}

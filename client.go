@@ -15,22 +15,22 @@ import (
 )
 
 type ClientFace interface {
-	Init(*Acceptor)                                  // init the client
-	Emit(string, interface{})                        // send message to socket client
-	EmitByInitiator(*Initiator, string, interface{}) // send message to socket server by initiator instance
-	Join(room string)                                // client join a room
-	Leave(room string)                               // client leave a room
-	LeaveAllRooms()                                  // client leave all of the rooms
-	Id() string                                      // get the client id
-	RemoteAddr() net.Addr                            // the ip:port of client
-	Acceptor() *Acceptor                             // get *Acceptor
-	Rooms() map[string]bool                          // get all rooms joined by the client
-	Ping() map[int64]bool                            // get ping
-	Delay() int64                                    // obtain a time delay that reflects the quality of the connection between the two ends
-	Out() chan string                                // get the message send channel
-	SetPing(map[int64]bool)                          // set ping
-	SetDelay(int64)                                  // set delay
-	SetRemoteAddr(net.Addr)                          // set remoteAddr
+	Init(*Acceptor)                                          // init the client
+	Emit(string, interface{}, string)                        // send message to socket client
+	EmitByInitiator(*Initiator, string, interface{}, string) // send message to socket server by initiator instance
+	Join(room string)                                        // client join a room
+	Leave(room string)                                       // client leave a room
+	LeaveAllRooms()                                          // client leave all of the rooms
+	Id() string                                              // get the client id
+	RemoteAddr() net.Addr                                    // the ip:port of client
+	Acceptor() *Acceptor                                     // get *Acceptor
+	Rooms() map[string]bool                                  // get all rooms joined by the client
+	Ping() map[int64]bool                                    // get ping
+	Delay() int64                                            // obtain a time delay that reflects the quality of the connection between the two ends
+	Out() chan string                                        // get the message send channel
+	SetPing(map[int64]bool)                                  // set ping
+	SetDelay(int64)                                          // set delay
+	SetRemoteAddr(net.Addr)                                  // set remoteAddr
 }
 
 type Client struct {
@@ -97,10 +97,10 @@ func (c *Client) SetRemoteAddr(v net.Addr) {
 	c.remoteAddr = v
 }
 
-func (c *Client) Emit(event string, args interface{}) {
-	msg, err := protocol.Encode(event, args)
+func (c *Client) Emit(event string, args interface{}, id string) {
+	msg, err := protocol.Encode(event, args, id)
 	if err != nil {
-		log.Println("Emit encode error:", err, event, args, c.Id(), c.RemoteAddr())
+		log.Println("Emit encode error:", err, event, args, id, c.Id(), c.RemoteAddr())
 		return
 	}
 	select {
@@ -118,14 +118,14 @@ func (c *Client) Emit(event string, args interface{}) {
 	}
 }
 
-func (c *Client) EmitByInitiator(i *Initiator, event string, args interface{}) {
+func (c *Client) EmitByInitiator(i *Initiator, event string, args interface{}, id string) {
 	// Similar to the OSI network model,
 	// add the socket client ID to re-packet args here, then send message to server by initiator instance
 	var req ArgsRequest
 	req.Id = c.Id()
 	req.Args = args
 	// send to socket server
-	i.Emit(event, req)
+	i.Emit(event, req, id)
 }
 
 func (c *Client) Join(room string) {
