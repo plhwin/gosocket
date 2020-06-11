@@ -131,7 +131,7 @@ func Encode(event string, args interface{}, id string) (msg string, err error) {
 		}
 	}
 	if id != "" {
-		body += "," + id
+		body += ",\"" + id + "\""
 	}
 	msg = "[" + body + "]"
 	return
