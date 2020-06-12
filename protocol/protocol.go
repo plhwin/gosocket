@@ -88,15 +88,15 @@ func cutFromRight(text string) (left, right string, err error) {
 // Parse message ["$event",$args,"$identity"]
 func Decode(text string) (msg *Message, err error) {
 	msg = new(Message)
-
-	//var event, args string
-	if msg.Event, msg.Args, err = cutFromLeft(text); err != nil {
+	var event, args string
+	if event, args, err = cutFromLeft(text); err != nil {
 		return
 	}
-	if msg.Event == "" {
+	if event == "" {
 		err = errors.New("wrong message format")
 		return
 	}
+	msg.Event, msg.Args = event, args
 	// if end with "(quote), it is possible to carry the client id
 	// it means that the data type of the client id must be a string
 	if strings.HasSuffix(msg.Args, "\"") {
