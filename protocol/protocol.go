@@ -76,7 +76,7 @@ func cutFromRight(text string) (left, right string, err error) {
 			break
 		}
 	}
-	if (c.end+1 > c.start-1) || (c.rest < 0) {
+	if (c.end+1 > c.start-1) || (c.rest < 1) {
 		err = errors.New("wrong message len")
 		return
 	}
@@ -89,30 +89,23 @@ func cutFromRight(text string) (left, right string, err error) {
 func Decode(text string) (msg *Message, err error) {
 	msg = new(Message)
 
-	var event, args string
-	if event, args, err = cutFromLeft(text); err != nil {
+	//var event, args string
+	if msg.Event, msg.Args, err = cutFromLeft(text); err != nil {
 		return
 	}
-	if event == "" {
+	if msg.Event == "" {
 		err = errors.New("wrong message format")
 		return
 	}
-	msg.Event = event
 	// if end with "(quote), it is possible to carry the client id
 	// it means that the data type of the client id must be a string
-	if strings.HasSuffix(args, "\"") {
-		var left, id string
-		if left, id, err = cutFromRight(args); err != nil {
-			return
+	if strings.HasSuffix(msg.Args, "\"") {
+		if left, right, cutErr := cutFromRight(msg.Args); cutErr == nil {
+			if msg.Args != "\""+right+"\"" {
+				msg.Args = left
+				msg.Id = right
+			}
 		}
-		if args == "\""+id+"\"" {
-			msg.Args = args
-		} else {
-			msg.Args = left
-			msg.Id = id
-		}
-	} else {
-		msg.Args = args
 	}
 	return
 }
