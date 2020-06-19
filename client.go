@@ -47,7 +47,7 @@ func (c *Client) Init(a *Acceptor) {
 	c.id = c.genId()
 	c.acceptor = a
 	// set a capacity N for the data transmission pipeline as a buffer. if the client has not received it, the pipeline will always keep the latest N
-	c.out = make(chan string, 200)
+	c.out = make(chan string, 500)
 	c.rooms = new(sync.Map)
 	c.ping = make(map[int64]bool)
 }
@@ -103,7 +103,6 @@ func (c *Client) Emit(event string, args interface{}, id string) {
 		log.Println("Emit encode error:", err, event, args, id, c.Id(), c.RemoteAddr())
 		return
 	}
-
 	c.out <- msg
 }
 

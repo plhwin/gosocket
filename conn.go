@@ -85,12 +85,7 @@ func (c *Conn) Emit(event string, args interface{}, id string) {
 		log.Println("Emit encode error:", err, event, args, id, c.Id(), c.RemoteAddr())
 		return
 	}
-	select {
-	// transfer data without blocking
-	case c.out <- msg:
-	default:
-		log.Println("conn Emit error:", c.Id(), c.RemoteAddr(), msg)
-	}
+	c.out <- msg
 }
 
 func (c *Conn) EmitByAcceptor(a *Acceptor, event string, args ArgsResponse, id string) {
