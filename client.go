@@ -103,19 +103,8 @@ func (c *Client) Emit(event string, args interface{}, id string) {
 		log.Println("Emit encode error:", err, event, args, id, c.Id(), c.RemoteAddr())
 		return
 	}
-	select {
-	// transfer data without blocking
-	case c.out <- msg:
-	default:
-		log.Println("client Emit error:", c.Id(), c.RemoteAddr(), msg)
-		// the capacity of the data transmission pipeline is full,
-		// may be the current network connection is of poor quality,
-		// remove the client from all rooms,
-		// And close the data transmission channel.(let the client re-initiate a new connection)
-		//c.LeaveAllRooms()
 
-		// @todo: in large-scale data testing, LeaveAllRooms was blocked here, need further observation and testing
-	}
+	c.out <- msg
 }
 
 func (c *Client) EmitByInitiator(i *Initiator, event string, args interface{}, id string) {

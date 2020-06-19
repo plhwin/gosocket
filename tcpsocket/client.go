@@ -67,10 +67,11 @@ func (c *Client) write() {
 		select {
 		case msg, ok := <-c.Out():
 			if !ok {
-				// the hub closed the channel.
+				log.Println("TCPSocket msg send channel has been closed:", ok, msg)
 				return
 			}
-			if _, err := c.conn.Write([]byte(msg + "\n")); err != nil {
+			if n, err := c.conn.Write([]byte(msg + "\n")); err != nil {
+				log.Println("TCPSocket write error:", err, n, msg)
 				return
 			}
 		case <-ticker.C:
