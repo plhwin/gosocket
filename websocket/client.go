@@ -2,8 +2,13 @@ package websocket
 
 import (
 	"log"
+	"net"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
+
+	"github.com/plhwin/gosocket/conf"
 
 	"github.com/plhwin/gosocket"
 
@@ -14,7 +19,7 @@ import (
 
 type ClientFace interface {
 	gosocket.ClientFace
-	init(*websocket.Conn, *gosocket.Acceptor) // init the client
+	init(*websocket.Conn, *gosocket.Acceptor, *http.Request) // init the client
 	read(ClientFace)
 	write()
 }
@@ -32,9 +37,23 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-func (c *Client) init(conn *websocket.Conn, a *gosocket.Acceptor) {
+func (c *Client) init(conn *websocket.Conn, a *gosocket.Acceptor, r *http.Request) {
 	c.conn = conn
-	c.SetRemoteAddr(conn.RemoteAddr())
+	// Set remoteAddr: Consider proxy
+	// Use custom header name and controlled by the developers to avoid fake IP
+	// Only set the name when the proxy is turned on
+	// The header value should be contains two parts, the format is ip:port
+	remoteAddr := conn.RemoteAddr()
+	if conf.RemoteAddrHeaderName != "" {
+		if remoteAddrStr := r.Header.Get(conf.RemoteAddrHeaderName); remoteAddrStr != "" {
+			if ss := strings.Split(remoteAddrStr, ":"); len(ss) == 2 {
+				if port, err := strconv.Atoi(ss[1]); err == nil {
+					remoteAddr = &net.TCPAddr{IP: net.ParseIP(ss[0]), Port: port}
+				}
+			}
+		}
+	}
+	c.SetRemoteAddr(remoteAddr)
 	c.Init(a)
 }
 
@@ -53,7 +72,7 @@ func Serve(a *gosocket.Acceptor, w http.ResponseWriter, r *http.Request, c Clien
 		return
 	}
 
-	c.init(conn, a)
+	c.init(conn, a, r)
 
 	// add the ClientFace to acceptor
 	a.Join(c)
