@@ -1,6 +1,11 @@
 package gosocket
 
-import "time"
+import (
+	"log"
+	"time"
+
+	"github.com/plhwin/gosocket/conf"
+)
 
 func NewInitiator() (i *Initiator) {
 	i = new(Initiator)
@@ -47,6 +52,9 @@ func (i *Initiator) socketId(c ConnFace, id string) {
 // the server initiate a ping and the client reply a pong
 func (i *Initiator) ping(c ConnFace, arg int64, id string) {
 	c.Emit(EventPong, arg, id)
+	if conf.Initiator.Logs.Heartbeat.PingReceive {
+		log.Println("[heartbeat][initiator][ping]:", c.Id(), c.RemoteAddr(), c.Delay())
+	}
 	return
 }
 
@@ -58,6 +66,9 @@ func (i *Initiator) pong(c ConnFace, arg int64) {
 		c.SetPing(make(map[int64]bool))
 		// update the value of delay
 		c.SetDelay(millisecond - arg)
+	}
+	if conf.Initiator.Logs.Heartbeat.PongReceive {
+		log.Println("[heartbeat][initiator][pong]:", c.Id(), c.RemoteAddr(), c.Delay())
 	}
 	return
 }

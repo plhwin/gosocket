@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/plhwin/gosocket/conf"
+
 	"github.com/plhwin/gosocket"
 
 	"github.com/plhwin/gosocket/protocol"
@@ -56,7 +58,7 @@ func Serve(conn net.Conn, a *gosocket.Acceptor, c ClientFace) {
 }
 
 func (c *Client) write() {
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(time.Duration(conf.Acceptor.Heartbeat.PingInterval) * time.Second)
 	defer func() {
 		ticker.Stop()
 		c.conn.Close()
@@ -78,7 +80,7 @@ func (c *Client) write() {
 			// when the socket server sends `ping` messages for x consecutive times
 			// but does not receive any` pong` messages back,
 			// the server will actively disconnect from this client
-			if len(c.Ping()) >= 5 {
+			if len(c.Ping()) >= conf.Acceptor.Heartbeat.PingMaxTimes {
 				// close the connection
 				return
 			}
@@ -90,7 +92,9 @@ func (c *Client) write() {
 				}
 				c.Ping()[millisecond] = true
 			}
-			log.Println("[heartbeat][ts][ping]:", c.Id(), c.RemoteAddr(), millisecond, timeNow.Format("2006-01-02 15:04:05.999"), c.Delay())
+			if conf.Acceptor.Logs.Heartbeat.PingSend {
+				log.Println("[heartbeat][TCPSocket][ping]:", c.Id(), c.RemoteAddr(), millisecond, timeNow.Format("2006-01-02 15:04:05.999"), c.Delay())
+			}
 		}
 	}
 }

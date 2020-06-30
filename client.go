@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/plhwin/gosocket/conf"
+
 	"github.com/plhwin/gosocket/protocol"
 )
 
@@ -118,17 +120,23 @@ func (c *Client) EmitByInitiator(i *Initiator, event string, args interface{}, i
 
 func (c *Client) Join(room string) {
 	c.acceptor.rooms.join <- roomClient{room, c}
-	log.Println("client join room:", room, c.Id(), c.RemoteAddr())
+	if conf.Acceptor.Logs.Room.Join {
+		log.Println("client join room:", room, c.Id(), c.RemoteAddr())
+	}
 }
 
 func (c *Client) Leave(room string) {
 	c.acceptor.rooms.leave <- roomClient{room, c}
-	log.Println("client Leave room:", room, c.Id(), c.RemoteAddr())
+	if conf.Acceptor.Logs.Room.Leave {
+		log.Println("client Leave room:", room, c.Id(), c.RemoteAddr())
+	}
 }
 
 func (c *Client) LeaveAllRooms() {
 	c.acceptor.rooms.leaveAll <- c
-	log.Println("client Leave all of the rooms:", c.Id(), c.RemoteAddr())
+	if conf.Acceptor.Logs.Room.Leave {
+		log.Println("client Leave all of the rooms:", c.Id(), c.RemoteAddr())
+	}
 }
 
 func (c *Client) genId() string {

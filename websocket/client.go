@@ -44,8 +44,8 @@ func (c *Client) init(conn *websocket.Conn, a *gosocket.Acceptor, r *http.Reques
 	// Only set the name when the proxy is turned on
 	// The header value should be contains two parts, the format is ip:port
 	remoteAddr := conn.RemoteAddr()
-	if conf.RemoteAddrHeaderName != "" {
-		if remoteAddrStr := r.Header.Get(conf.RemoteAddrHeaderName); remoteAddrStr != "" {
+	if conf.Acceptor.Websocket.RemoteAddrHeaderName != "" {
+		if remoteAddrStr := r.Header.Get(conf.Acceptor.Websocket.RemoteAddrHeaderName); remoteAddrStr != "" {
 			if ss := strings.Split(remoteAddrStr, ":"); len(ss) == 2 {
 				if port, err := strconv.Atoi(ss[1]); err == nil {
 					remoteAddr = &net.TCPAddr{IP: net.ParseIP(ss[0]), Port: port}
@@ -68,7 +68,7 @@ func (c *Client) Close(face ClientFace) {
 func Serve(a *gosocket.Acceptor, w http.ResponseWriter, r *http.Request, c ClientFace) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println("[upgrade][ws] error: ", err)
+		log.Println("[upgrade][ws] error:", err)
 		return
 	}
 
@@ -88,7 +88,7 @@ func Serve(a *gosocket.Acceptor, w http.ResponseWriter, r *http.Request, c Clien
 }
 
 func (c *Client) write() {
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(time.Duration(conf.Acceptor.Heartbeat.PingInterval) * time.Second)
 	defer func() {
 		ticker.Stop()
 		c.conn.Close()
@@ -116,7 +116,7 @@ func (c *Client) write() {
 			// when the Websocket server sends `ping` messages for x consecutive times
 			// but does not receive any` pong` messages back,
 			// the server will actively disconnect from this client
-			if len(c.Ping()) >= 5 {
+			if len(c.Ping()) >= conf.Acceptor.Heartbeat.PingMaxTimes {
 				// close the connection
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
@@ -129,7 +129,9 @@ func (c *Client) write() {
 				}
 				c.Ping()[millisecond] = true
 			}
-			log.Println("[heartbeat][ws][ping]:", c.Id(), c.RemoteAddr(), millisecond, timeNow.Format("2006-01-02 15:04:05.999"), c.Delay())
+			if conf.Acceptor.Logs.Heartbeat.PingSend {
+				log.Println("[heartbeat][WebSocket][ping]:", c.Id(), c.RemoteAddr(), millisecond, timeNow.Format("2006-01-02 15:04:05.999"), c.Delay())
+			}
 		}
 	}
 }

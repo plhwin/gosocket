@@ -3,6 +3,8 @@ package gosocket
 import (
 	"log"
 	"time"
+
+	"github.com/plhwin/gosocket/conf"
 )
 
 func NewAcceptor() (a *Acceptor) {
@@ -28,6 +30,9 @@ type Acceptor struct {
 // the client initiate a ping and the server reply a pong
 func (a *Acceptor) ping(c ClientFace, arg int64, id string) {
 	c.Emit(EventPong, arg, id)
+	if conf.Acceptor.Logs.Heartbeat.PingReceive {
+		log.Println("[heartbeat][acceptor][ping]:", c.Id(), c.RemoteAddr(), c.Delay())
+	}
 	return
 }
 
@@ -39,6 +44,9 @@ func (a *Acceptor) pong(c ClientFace, arg int64) {
 		c.SetPing(make(map[int64]bool))
 		// update the value of delay
 		c.SetDelay(millisecond - arg)
+	}
+	if conf.Acceptor.Logs.Heartbeat.PongReceive {
+		log.Println("[heartbeat][acceptor][pong]:", c.Id(), c.RemoteAddr(), c.Delay())
 	}
 	return
 }
@@ -62,11 +70,9 @@ func (a *Acceptor) manageClients() {
 		select {
 		case c := <-a.join:
 			a.clients[c.Id()] = c
-			log.Println("[acceptor] join:", c.Id())
 		case c := <-a.leave:
 			if _, ok := a.clients[c.Id()]; ok {
 				delete(a.clients, c.Id())
-				log.Println("[acceptor] leave:", c.Id())
 			}
 		}
 	}

@@ -8,13 +8,48 @@ import (
 )
 
 var (
-	RemoteAddrHeaderName string
-	Logs                 logs
+	Acceptor = acceptor{
+		Heartbeat: heartbeat{
+			PingInterval: 5,
+			PingMaxTimes: 2,
+		},
+	}
+	Initiator initiator
 )
 
+type acceptor struct {
+	Websocket websocket
+	Heartbeat heartbeat
+	Logs      logs
+}
+
+type websocket struct {
+	RemoteAddrHeaderName string
+}
+
+type heartbeat struct {
+	PingInterval int
+	PingMaxTimes int
+}
+
 type logs struct {
-	Heartbeat bool
-	Room      bool
+	Heartbeat heartbeatLogs
+	Room      room
+}
+
+type heartbeatLogs struct {
+	PingSend    bool
+	PingReceive bool
+	PongReceive bool
+}
+
+type room struct {
+	Join  bool
+	Leave bool
+}
+
+type initiator struct {
+	Logs logs
 }
 
 func Init(configFile string) {
@@ -26,11 +61,33 @@ func Init(configFile string) {
 }
 
 func initConf() {
-	RemoteAddrHeaderName = viper.GetString("remoteAddrHeaderName")
-	Logs = logs{
-		Heartbeat: viper.GetBool("logs.heartbeat"),
-		Room:      viper.GetBool("logs.room"),
+	Acceptor = acceptor{
+		Websocket: websocket{
+			RemoteAddrHeaderName: viper.GetString("acceptor.websocket.remoteAddrHeaderName"),
+		},
+		Heartbeat: heartbeat{
+			PingInterval: viper.GetInt("acceptor.heartbeat.pingInterval"),
+			PingMaxTimes: viper.GetInt("acceptor.heartbeat.pingMaxTimes"),
+		},
+		Logs: logs{
+			Heartbeat: heartbeatLogs{
+				PingSend:    viper.GetBool("acceptor.logs.heartbeat.pingSend"),
+				PingReceive: viper.GetBool("acceptor.logs.heartbeat.pingReceive"),
+				PongReceive: viper.GetBool("acceptor.logs.heartbeat.pongReceive"),
+			},
+			Room: room{
+				Join:  viper.GetBool("acceptor.logs.room.join"),
+				Leave: viper.GetBool("acceptor.logs.room.leave"),
+			},
+		},
 	}
-
-	log.Printf("[gosocket][config]: RemoteAddrHeaderName: %+v Logs: %+v \n", RemoteAddrHeaderName, Logs)
+	Initiator = initiator{
+		Logs: logs{
+			Heartbeat: heartbeatLogs{
+				PingReceive: viper.GetBool("initiator.logs.heartbeat.pingReceive"),
+				PongReceive: viper.GetBool("initiator.logs.heartbeat.pongReceive"),
+			},
+		},
+	}
+	log.Printf("[gosocket][config]:\nAcceptor: %+v \nInitiator: %+v \n\n", Acceptor, Initiator)
 }
