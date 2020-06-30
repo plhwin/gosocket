@@ -69,11 +69,11 @@ func (c *Client) write() {
 		select {
 		case msg, ok := <-c.Out():
 			if !ok {
-				log.Println("TCPSocket msg send channel has been closed:", ok, msg)
+				log.Println("[TCPSocket][client][write] msg send channel has been closed:", msg, c.Id(), c.RemoteAddr())
 				return
 			}
 			if n, err := c.conn.Write([]byte(msg + "\n")); err != nil {
-				log.Println("TCPSocket write error:", err, n, msg)
+				log.Println("[TCPSocket][client][write] error:", err, n, msg, c.Id(), c.RemoteAddr())
 				return
 			}
 		case <-ticker.C:
@@ -109,14 +109,14 @@ func (c *Client) read(face ClientFace) {
 	for {
 		msg, err := reader.ReadString(end)
 		if err != nil {
-			log.Println("[client][ts] go away:", err, c.Id(), c.RemoteAddr())
+			log.Println("[TCPSocket][client][read] go away:", err, c.Id(), c.RemoteAddr())
 			break
 		}
 		// parse the message to determine what the client connection wants to do
 		msg = strings.Replace(msg, string([]byte{end}), "", -1)
 		message, err := protocol.Decode(msg)
 		if err != nil {
-			log.Println("[client][ts] msg parse error:", err, c.Id(), c.RemoteAddr(), msg)
+			log.Println("[TCPSocket][client][read] msg decode error:", err, msg, c.Id(), c.RemoteAddr())
 			continue
 		}
 

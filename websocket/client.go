@@ -68,7 +68,7 @@ func (c *Client) Close(face ClientFace) {
 func Serve(a *gosocket.Acceptor, w http.ResponseWriter, r *http.Request, c ClientFace) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println("[upgrade][ws] error:", err)
+		log.Println("[WebSocket][client][Serve] upgrade error:", err)
 		return
 	}
 
@@ -143,7 +143,7 @@ func (c *Client) read(face ClientFace) {
 	for {
 		_, msg, err := c.conn.ReadMessage()
 		if err != nil {
-			log.Println("[client][ws] go away:", err, c.Id(), c.RemoteAddr())
+			log.Println("[WebSocket][client][read] go away:", err, c.Id(), c.RemoteAddr())
 			break
 			// error reading the message, break out of the loop,
 			// the function of defer will executes the instruction to disconnect the client
@@ -156,7 +156,7 @@ func (c *Client) process(face ClientFace, msg string) {
 	// parse the message to determine what the client connection wants to do
 	message, err := protocol.Decode(msg)
 	if err != nil {
-		log.Println("[client][ws] msg parse error:", err, msg)
+		log.Println("[WebSocket][client][read] msg decode error:", err, msg, c.Id(), c.RemoteAddr())
 		return
 	}
 	c.Acceptor().CallEvent(face, message)

@@ -48,14 +48,14 @@ func (c *Conn) read(face ConnFace) {
 	for {
 		msg, err := reader.ReadString(end)
 		if err != nil {
-			log.Println("can not read from tcp socket server, the connection will be close right now!", err, msg)
+			log.Println("[TCPSocket][conn][read] error:", err, msg)
 			break
 		}
 		// parse the message to determine what the client connection wants to do
 		msg = strings.Replace(msg, string([]byte{end}), "", -1)
 		message, err := protocol.Decode(msg)
 		if err != nil {
-			log.Println("msg read from tcp socket server decode error:", err, msg)
+			log.Println("[TCPSocket][conn][read] msg decode error:", err, msg)
 			continue
 		}
 		// bind function handler
@@ -67,7 +67,7 @@ func (c *Conn) write() {
 	defer c.conn.Close()
 	for msg := range c.Out() {
 		if _, err := c.conn.Write([]byte(msg + "\n")); err != nil {
-			log.Println("can not write message to the tcp socket server, the connection will be close right now!", err, msg)
+			log.Println("[TCPSocket][conn][write] error:", err, msg)
 			break
 		}
 	}
