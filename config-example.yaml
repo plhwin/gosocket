@@ -3,10 +3,10 @@ acceptor:
     remoteAddrHeaderName: "" # Use custom header name and controlled by the developers to avoid fake IP, if using proxy
   heartbeat:
     pingInterval: 5 # Time interval for actively initiating a heartbeat to the client, unit:seconds, need to be set to a positive integer greater than 0, the default value is 5
-    pingMaxTimes: 2 # When N times of ping messages are continuously sent to the client, but no pong response was received, the server actively disconnects, which needs to be set to a positive integer greater than 0, the default value is 2
+    pingMaxTimes: 2 # When N times of ping messages are continuously sent to the client, but the client did not reply to any of these messages, the server actively disconnects, which needs to be set to a positive integer greater than 0, the default value is 2
   logs:
     heartbeat:
-      pingSend: true # Actively initiate a heartbeat ping message to the client
+      pingSend: true # Server send a ping message to the client
       pingReceive: false # Receive ping message from client
       pongReceive: false # Receive pong message from client
     room:
@@ -14,6 +14,6 @@ acceptor:
       leave: true # client leave room
 initiator:
   logs:
-    heartbeat: # The server is currently used to initiate ping and force the client to respond to pong's heartbeat mode, The client initiated heartbeat mode has not yet been achieved
+    heartbeat: # The current heartbeat mode is: server send a ping message to the client, and the client must reply a pong message
       pingReceive: false # Receive ping message from server
       pongReceive: false # Receive pong message from server
