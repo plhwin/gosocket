@@ -38,9 +38,10 @@ type logs struct {
 }
 
 type heartbeatLogs struct {
-	PingSend    bool
-	PingReceive bool
-	PongReceive bool
+	PingSend           bool
+	PingSendPrintDelay int64
+	PingReceive        bool
+	PongReceive        bool
 }
 
 type room struct {
@@ -71,9 +72,10 @@ func initConf() {
 		},
 		Logs: logs{
 			Heartbeat: heartbeatLogs{
-				PingSend:    viper.GetBool("acceptor.logs.heartbeat.pingSend"),
-				PingReceive: viper.GetBool("acceptor.logs.heartbeat.pingReceive"),
-				PongReceive: viper.GetBool("acceptor.logs.heartbeat.pongReceive"),
+				PingSend:           viper.GetBool("acceptor.logs.heartbeat.pingSend"),
+				PingSendPrintDelay: viper.GetInt64("acceptor.logs.heartbeat.pingSendPrintDelay"),
+				PingReceive:        viper.GetBool("acceptor.logs.heartbeat.pingReceive"),
+				PongReceive:        viper.GetBool("acceptor.logs.heartbeat.pongReceive"),
 			},
 			Room: room{
 				Join:  viper.GetBool("acceptor.logs.room.join"),

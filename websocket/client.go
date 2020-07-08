@@ -100,7 +100,7 @@ func (c *Client) write() {
 		case msg, ok := <-c.Out():
 			//c.Conn().SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
-				// the hub closed the channel.
+				log.Println("[WebSocket][client][write] msg send channel has been closed:", msg, c.Id(), c.RemoteAddr())
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
@@ -129,7 +129,7 @@ func (c *Client) write() {
 				}
 				c.Ping()[millisecond] = true
 			}
-			if conf.Acceptor.Logs.Heartbeat.PingSend {
+			if conf.Acceptor.Logs.Heartbeat.PingSend && millisecond >= conf.Acceptor.Logs.Heartbeat.PingSendPrintDelay {
 				log.Println("[heartbeat][WebSocket][ping]:", c.Id(), c.RemoteAddr(), millisecond, timeNow.Format("2006-01-02 15:04:05.999"), c.Delay())
 			}
 		}

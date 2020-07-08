@@ -7,6 +7,7 @@ acceptor:
   logs:
     heartbeat:
       pingSend: true # Server send a ping message to the client
+      pingSendPrintDelay: 0 # Unit:ms, Only print logs longer than x milliseconds, the default value is 0
       pingReceive: false # Receive ping message from client
       pongReceive: false # Receive pong message from client
     room:
