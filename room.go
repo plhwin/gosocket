@@ -67,7 +67,6 @@ func (r *rooms) Run() {
 
 // remove the client from all the rooms, and close the message send channel
 func (r *rooms) Remove(c *Client) {
-	close(c.out)
 	c.rooms.Range(func(k, v interface{}) bool {
 		room := k.(string)
 		c.rooms.Delete(room)
