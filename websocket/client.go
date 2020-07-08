@@ -129,7 +129,7 @@ func (c *Client) write() {
 				}
 				c.Ping()[millisecond] = true
 			}
-			if conf.Acceptor.Logs.Heartbeat.PingSend && millisecond >= conf.Acceptor.Logs.Heartbeat.PingSendPrintDelay {
+			if conf.Acceptor.Logs.Heartbeat.PingSend && c.Delay() >= conf.Acceptor.Logs.Heartbeat.PingSendPrintDelay {
 				log.Println("[heartbeat][WebSocket][ping]:", c.Id(), c.RemoteAddr(), millisecond, timeNow.Format("2006-01-02 15:04:05.999"), c.Delay())
 			}
 		}
