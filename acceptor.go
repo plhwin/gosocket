@@ -2,6 +2,7 @@ package gosocket
 
 import (
 	"log"
+	"sync"
 	"time"
 
 	"github.com/plhwin/gosocket/conf"
@@ -22,7 +23,7 @@ func NewAcceptor() (a *Acceptor) {
 type Acceptor struct {
 	events
 	rooms   *rooms
-	clients map[string]ClientFace
+	clients *sync.Map // map[string]ClientFace
 	join    chan ClientFace
 	leave   chan ClientFace
 }
@@ -59,7 +60,7 @@ func (a *Acceptor) onConn(f interface{}) {
 }
 
 func (a *Acceptor) initClients() {
-	a.clients = make(map[string]ClientFace)
+	a.clients = new(sync.Map)
 	a.join = make(chan ClientFace)
 	a.leave = make(chan ClientFace)
 	go a.manageClients()
@@ -69,10 +70,10 @@ func (a *Acceptor) manageClients() {
 	for {
 		select {
 		case c := <-a.join:
-			a.clients[c.Id()] = c
+			a.clients.Store(c.Id(), c)
 		case c := <-a.leave:
-			if _, ok := a.clients[c.Id()]; ok {
-				delete(a.clients, c.Id())
+			if _, ok := a.clients.Load(c.Id()); ok {
+				a.clients.Delete(c.Id())
 			}
 		}
 	}
@@ -96,24 +97,32 @@ func (a *Acceptor) BroadcastTo(room, event string, args interface{}, id string) 
 }
 
 func (a *Acceptor) BroadcastToAll(event string, args interface{}, id string) {
-	for _, client := range a.clients {
+	for _, client := range a.Clients() {
 		client.Emit(event, args, id)
 	}
 }
 
 func (a *Acceptor) Emit(clientId, event string, args interface{}, id string) {
-	if client, ok := a.clients[clientId]; ok {
-		client.Emit(event, args, id)
+	if v, ok := a.clients.Load(clientId); ok {
+		v.(ClientFace).Emit(event, args, id)
 	}
 }
 
 func (a *Acceptor) Client(clientId string) (c ClientFace, ok bool) {
-	c, ok = a.clients[clientId]
+	var v interface{}
+	if v, ok = a.clients.Load(clientId); ok {
+		c = v.(ClientFace)
+	}
 	return
 }
 
 func (a *Acceptor) Clients() map[string]ClientFace {
-	return a.clients
+	clients := make(map[string]ClientFace)
+	a.clients.Range(func(k, v interface{}) bool {
+		clients[k.(string)] = v.(ClientFace)
+		return true
+	})
+	return clients
 }
 
 func (a *Acceptor) ClientsByRoom(room string) (clientFaces []ClientFace) {
