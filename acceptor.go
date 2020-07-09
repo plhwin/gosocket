@@ -117,7 +117,8 @@ func (a *Acceptor) Clients() map[string]ClientFace {
 }
 
 func (a *Acceptor) ClientsByRoom(room string) (clientFaces []ClientFace) {
-	if clients, ok := a.rooms.clients[room]; ok {
+	if v, ok := a.rooms.clients.Load(room); ok {
+		clients := v.(map[*Client]bool)
 		for client := range clients {
 			// What we need is the clientFace that injected by the user
 			if clientFace, ok := a.Client(client.id); ok {

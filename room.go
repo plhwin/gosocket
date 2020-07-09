@@ -1,5 +1,7 @@
 package gosocket
 
+import "sync"
+
 type roomClient struct {
 	room   string
 	client *Client
@@ -14,16 +16,16 @@ type roomMessage struct {
 
 // rooms maintains the set of active clients and broadcasts messages to the clients
 type rooms struct {
-	clients   map[string]map[*Client]bool // all the clients in the rooms
-	broadcast chan roomMessage            // this channel is responsible for broadcasting messages to designated rooms
-	join      chan roomClient             // client request to join a room
-	leave     chan roomClient             // client request to leave a room
-	leaveAll  chan *Client                // client request to leave all of the rooms
+	clients   *sync.Map        // map[string]map[*Client]bool all the clients in the rooms
+	broadcast chan roomMessage // this channel is responsible for broadcasting messages to designated rooms
+	join      chan roomClient  // client request to join a room
+	leave     chan roomClient  // client request to leave a room
+	leaveAll  chan *Client     // client request to leave all of the rooms
 }
 
 func newRooms() *rooms {
 	return &rooms{
-		clients:   make(map[string]map[*Client]bool),
+		clients:   new(sync.Map),
 		broadcast: make(chan roomMessage),
 		join:      make(chan roomClient),
 		leave:     make(chan roomClient),
@@ -36,17 +38,23 @@ func (r *rooms) Run() {
 		select {
 		// client request to join a room
 		case rc := <-r.join:
-			if _, ok := r.clients[rc.room]; !ok {
+			var clients map[*Client]bool
+			if v, ok := r.clients.Load(rc.room); ok {
+				clients = v.(map[*Client]bool)
+			} else {
 				// init a new room
-				r.clients[rc.room] = make(map[*Client]bool)
+				clients = make(map[*Client]bool)
 			}
-			r.clients[rc.room][rc.client] = true
+			clients[rc.client] = true
+			r.clients.Store(rc.room, clients)
 			rc.client.rooms.Store(rc.room, true)
 		// client request to leave a room
 		case rc := <-r.leave:
 			// do not close the message send channel(rc.client.out) here,may be other data to be transferred
-			if _, ok := r.clients[rc.room]; ok {
-				delete(r.clients[rc.room], rc.client)
+			if v, ok := r.clients.Load(rc.room); ok {
+				clients := v.(map[*Client]bool)
+				delete(clients, rc.client)
+				r.clients.Store(rc.room, clients)
 			}
 			if _, ok := rc.client.rooms.Load(rc.room); ok {
 				rc.client.rooms.Delete(rc.room)
@@ -56,8 +64,9 @@ func (r *rooms) Run() {
 			r.Remove(client)
 		// broadcasting messages to designated rooms
 		case rm := <-r.broadcast:
-			if _, ok := r.clients[rm.room]; ok {
-				for client := range r.clients[rm.room] {
+			if v, ok := r.clients.Load(rm.room); ok {
+				clients := v.(map[*Client]bool)
+				for client := range clients {
 					client.Emit(rm.event, rm.args, rm.id)
 				}
 			}
@@ -70,8 +79,11 @@ func (r *rooms) Remove(c *Client) {
 	c.rooms.Range(func(k, v interface{}) bool {
 		room := k.(string)
 		c.rooms.Delete(room)
-		if _, ok := r.clients[room][c]; ok {
-			delete(r.clients[room], c)
+		// delete client from room
+		if v, ok := r.clients.Load(room); ok {
+			clients := v.(map[*Client]bool)
+			delete(clients, c)
+			r.clients.Store(room, clients)
 		}
 		return true
 	})
