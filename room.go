@@ -58,7 +58,7 @@ func (r *rooms) Run() {
 			}
 		// client request to leave all of the rooms
 		case client := <-r.leaveAll:
-			r.Remove(client)
+			r.RemoveAll(client)
 		// broadcasting messages to designated rooms
 		case rm := <-r.broadcast:
 			if v, ok := r.clients.Load(rm.room); ok {
@@ -71,7 +71,7 @@ func (r *rooms) Run() {
 }
 
 // remove the client from all the rooms, and close the message send channel
-func (r *rooms) Remove(c *Client) {
+func (r *rooms) RemoveAll(c *Client) {
 	c.rooms.Range(func(k, v interface{}) bool {
 		room := k.(string)
 		c.rooms.Delete(room)
@@ -81,6 +81,8 @@ func (r *rooms) Remove(c *Client) {
 		}
 		return true
 	})
+	// Finally close the send channel
+	close(c.out)
 }
 
 // broadcast message to room

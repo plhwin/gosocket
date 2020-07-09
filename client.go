@@ -100,6 +100,14 @@ func (c *Client) SetRemoteAddr(v net.Addr) {
 }
 
 func (c *Client) Emit(event string, args interface{}, id string) {
+	// This is a Insurance measures to avoid "send on closed channel" panic
+	// This is a temporary measure
+	// Usually due to non-compliance with the channel closing principle
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("gosocket client emit panic: ", r, c.Id(), c.RemoteAddr())
+		}
+	}()
 	msg, err := protocol.Encode(event, args, id)
 	if err != nil {
 		log.Println("[GoSocket][Emit] encode error:", err, event, args, id, c.Id(), c.RemoteAddr())
