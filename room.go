@@ -38,23 +38,20 @@ func (r *rooms) Run() {
 		select {
 		// client request to join a room
 		case rc := <-r.join:
-			var clients map[*Client]bool
 			if v, ok := r.clients.Load(rc.room); ok {
-				clients = v.(map[*Client]bool)
+				v.(map[*Client]bool)[rc.client] = true
 			} else {
-				// init a new room
-				clients = make(map[*Client]bool)
+				// new room
+				clients := make(map[*Client]bool)
+				clients[rc.client] = true
+				r.clients.Store(rc.room, clients)
 			}
-			clients[rc.client] = true
-			r.clients.Store(rc.room, clients)
 			rc.client.rooms.Store(rc.room, true)
 		// client request to leave a room
 		case rc := <-r.leave:
 			// do not close the message send channel(rc.client.out) here,may be other data to be transferred
 			if v, ok := r.clients.Load(rc.room); ok {
-				clients := v.(map[*Client]bool)
-				delete(clients, rc.client)
-				r.clients.Store(rc.room, clients)
+				delete(v.(map[*Client]bool), rc.client)
 			}
 			if _, ok := rc.client.rooms.Load(rc.room); ok {
 				rc.client.rooms.Delete(rc.room)
@@ -65,8 +62,7 @@ func (r *rooms) Run() {
 		// broadcasting messages to designated rooms
 		case rm := <-r.broadcast:
 			if v, ok := r.clients.Load(rm.room); ok {
-				clients := v.(map[*Client]bool)
-				for client := range clients {
+				for client := range v.(map[*Client]bool) {
 					client.Emit(rm.event, rm.args, rm.id)
 				}
 			}
@@ -81,9 +77,7 @@ func (r *rooms) Remove(c *Client) {
 		c.rooms.Delete(room)
 		// delete client from room
 		if v, ok := r.clients.Load(room); ok {
-			clients := v.(map[*Client]bool)
-			delete(clients, c)
-			r.clients.Store(room, clients)
+			delete(v.(map[*Client]bool), c)
 		}
 		return true
 	})
