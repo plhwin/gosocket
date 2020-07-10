@@ -35,6 +35,7 @@ type heartbeat struct {
 type logs struct {
 	Heartbeat heartbeatLogs
 	Room      room
+	LeaveAll  bool
 }
 
 type heartbeatLogs struct {
@@ -81,6 +82,7 @@ func initConf() {
 				Join:  viper.GetBool("acceptor.logs.room.join"),
 				Leave: viper.GetBool("acceptor.logs.room.leave"),
 			},
+			LeaveAll: viper.GetBool("acceptor.logs.leaveAll"),
 		},
 	}
 	Initiator = initiator{

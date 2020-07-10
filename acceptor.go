@@ -88,10 +88,6 @@ func (a *Acceptor) Join(c ClientFace) {
 	a.join <- c
 }
 
-func (a *Acceptor) Leave(c ClientFace) {
-	a.leave <- c
-}
-
 func (a *Acceptor) BroadcastTo(room, event string, args interface{}, id string) {
 	a.rooms.BroadcastTo(room, event, args, id)
 }

@@ -13,6 +13,7 @@ acceptor:
     room:
       join: true # client join room
       leave: true # client leave room
+    leaveAll: true # client leave from acceptor and leave all the rooms
 initiator:
   logs:
     heartbeat: # The current heartbeat mode is: server send a ping message to the client, and the client must reply a pong message

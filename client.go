@@ -22,7 +22,7 @@ type ClientFace interface {
 	EmitByInitiator(*Initiator, string, interface{}, string) // send message to socket server by initiator instance
 	Join(room string)                                        // client join a room
 	Leave(room string)                                       // client leave a room
-	LeaveAllRooms()                                          // client leave all of the rooms
+	LeaveAll()                                               // client leave all of the rooms
 	Id() string                                              // get the client id
 	RemoteAddr() net.Addr                                    // the ip:port of client
 	Acceptor() *Acceptor                                     // get *Acceptor
@@ -128,7 +128,6 @@ func (c *Client) Emit(event string, args interface{}, id string) {
 		log.Println("receive the stop signal, the socket was closed", c.Id(), c.RemoteAddr())
 		return
 	case c.out <- msg:
-		log.Println("msg send", msg, c.Id(), c.RemoteAddr())
 	}
 }
 
@@ -152,14 +151,15 @@ func (c *Client) Join(room string) {
 func (c *Client) Leave(room string) {
 	c.acceptor.rooms.leave <- roomClient{room, c}
 	if conf.Acceptor.Logs.Room.Leave {
-		log.Println("[room][Leave]:", room, c.Id(), c.RemoteAddr())
+		log.Println("[room][leave]:", room, c.Id(), c.RemoteAddr())
 	}
 }
 
-func (c *Client) LeaveAllRooms() {
+func (c *Client) LeaveAll() {
 	c.acceptor.rooms.leaveAll <- c
-	if conf.Acceptor.Logs.Room.Leave {
-		log.Println("[room][LeaveAll]:", c.Id(), c.RemoteAddr())
+	c.acceptor.leave <- c
+	if conf.Acceptor.Logs.LeaveAll {
+		log.Println("[leaveAll]:", c.Id(), c.RemoteAddr())
 	}
 }
 

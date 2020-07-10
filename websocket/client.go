@@ -59,8 +59,7 @@ func (c *Client) init(conn *websocket.Conn, a *gosocket.Acceptor, r *http.Reques
 
 func (c *Client) Close(face ClientFace) {
 	c.conn.Close()
-	c.LeaveAllRooms()
-	c.Acceptor().Leave(c)
+	c.LeaveAll()
 	c.Acceptor().CallGivenEvent(face, gosocket.OnDisconnection)
 }
 
@@ -92,11 +91,11 @@ func (c *Client) write() {
 	defer func() {
 		ticker.Stop()
 		c.conn.Close()
-		close(c.StopOut())
 		// Give a signal to the sender(Emit)
 		// Here is the consumer program of the channel c.Out()
 		// Can not close c.Out() here
 		// c.Out() channel must be close by it's sender
+		close(c.StopOut())
 	}()
 	for {
 		select {

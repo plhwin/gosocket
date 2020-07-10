@@ -34,8 +34,7 @@ func (c *Client) init(conn net.Conn, a *gosocket.Acceptor) {
 
 func (c *Client) Close(face ClientFace) {
 	c.conn.Close()
-	c.LeaveAllRooms()
-	c.Acceptor().Leave(c)
+	c.LeaveAll()
 	c.Acceptor().CallGivenEvent(face, gosocket.OnDisconnection)
 }
 
