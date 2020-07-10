@@ -29,7 +29,8 @@ type ClientFace interface {
 	Rooms() map[string]bool                                  // get all rooms joined by the client
 	Ping() map[int64]bool                                    // get ping
 	Delay() int64                                            // obtain a time delay that reflects the quality of the connection between the two ends
-	Out() chan string                                        // get the message send channel
+	Out() chan string                                        // message send channel
+	StopOut() chan bool                                      // stop send message signal channel
 	SetPing(map[int64]bool)                                  // set ping
 	SetDelay(int64)                                          // set delay
 	SetRemoteAddr(net.Addr)                                  // set remoteAddr
@@ -41,6 +42,7 @@ type Client struct {
 	acceptor   *Acceptor      // event processing function register
 	rooms      *sync.Map      // map[string]bool all rooms joined by the client, used to quickly join and leave the rooms
 	out        chan string    // message send channel
+	stopOut    chan bool      // stop send message signal channel
 	ping       map[int64]bool // ping
 	delay      int64          // delay
 }
@@ -50,6 +52,7 @@ func (c *Client) Init(a *Acceptor) {
 	c.acceptor = a
 	// set a capacity N for the data transmission pipeline as a buffer. if the client has not received it, the pipeline will always keep the latest N
 	c.out = make(chan string, 500)
+	c.stopOut = make(chan bool)
 	c.rooms = new(sync.Map)
 	c.ping = make(map[int64]bool)
 }
@@ -87,6 +90,10 @@ func (c *Client) Out() chan string {
 	return c.out
 }
 
+func (c *Client) StopOut() chan bool {
+	return c.stopOut
+}
+
 func (c *Client) SetPing(v map[int64]bool) {
 	c.ping = v
 }
@@ -113,7 +120,16 @@ func (c *Client) Emit(event string, args interface{}, id string) {
 		log.Println("[GoSocket][Emit] encode error:", err, event, args, id, c.Id(), c.RemoteAddr())
 		return
 	}
-	c.out <- msg
+	select {
+	case <-c.stopOut:
+		// close(c.out)
+		// The channel of c.out will close itself when there is no goroutine reference
+		// so, no need to close(c.out) here
+		log.Println("receive the stop signal, the socket was closed", c.Id(), c.RemoteAddr())
+		return
+	case c.out <- msg:
+		log.Println("msg send", msg, c.Id(), c.RemoteAddr())
+	}
 }
 
 func (c *Client) EmitByInitiator(i *Initiator, event string, args interface{}, id string) {

@@ -81,8 +81,6 @@ func (r *rooms) RemoveAll(c *Client) {
 		}
 		return true
 	})
-	// Finally close the send channel
-	close(c.out)
 }
 
 // broadcast message to room

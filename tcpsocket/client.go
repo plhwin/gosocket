@@ -62,8 +62,11 @@ func (c *Client) write() {
 	defer func() {
 		ticker.Stop()
 		c.conn.Close()
-		// the data transmission channel (c.Out) is not closed here,
-		// it will be handled uniformly by read method
+		// Give a signal to the sender(Emit)
+		// Here is the consumer program of the channel c.Out()
+		// Can not close c.Out() here
+		// c.Out() channel must be close by it's sender
+		close(c.StopOut())
 	}()
 	for {
 		select {
