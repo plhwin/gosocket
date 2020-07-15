@@ -31,7 +31,8 @@ type ClientFace interface {
 	Delay() int64                                            // obtain a time delay that reflects the quality of the connection between the two ends
 	Out() chan string                                        // message send channel
 	StopOut() chan bool                                      // stop send message signal channel
-	SetPing(map[int64]bool)                                  // set ping
+	SetPing(int64, bool)                                     // set ping
+	ClearPing()                                              // clear ping
 	SetDelay(int64)                                          // set delay
 	SetRemoteAddr(net.Addr)                                  // set remoteAddr
 }
@@ -44,6 +45,7 @@ type Client struct {
 	out        chan string    // message send channel
 	stopOut    chan bool      // stop send message signal channel
 	ping       map[int64]bool // ping
+	mu         sync.RWMutex   // mutex
 	delay      int64          // delay
 }
 
@@ -79,10 +81,14 @@ func (c *Client) Rooms() map[string]bool {
 }
 
 func (c *Client) Ping() map[int64]bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	return c.ping
 }
 
 func (c *Client) Delay() int64 {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	return c.delay
 }
 
@@ -94,11 +100,21 @@ func (c *Client) StopOut() chan bool {
 	return c.stopOut
 }
 
-func (c *Client) SetPing(v map[int64]bool) {
-	c.ping = v
+func (c *Client) SetPing(k int64, v bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.ping[k] = v
+}
+
+func (c *Client) ClearPing() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.ping = make(map[int64]bool)
 }
 
 func (c *Client) SetDelay(v int64) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.delay = v
 }
 

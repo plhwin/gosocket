@@ -118,8 +118,10 @@ func (c *Client) write() {
 			// when the Websocket server sends `ping` messages for x consecutive times
 			// but does not receive any` pong` messages back,
 			// the server will actively disconnect from this client
-			if len(c.Ping()) >= conf.Acceptor.Heartbeat.PingMaxTimes {
+			pings := c.Ping()
+			if len(pings) >= conf.Acceptor.Heartbeat.PingMaxTimes {
 				// close the connection
+				log.Println("[WebSocket][client][write] miss pong reply:", c.Id(), c.RemoteAddr(), len(pings))
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
@@ -129,10 +131,10 @@ func (c *Client) write() {
 				if err := c.conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
 					return
 				}
-				c.Ping()[millisecond] = true
+				c.SetPing(millisecond, true)
 			}
 			if conf.Acceptor.Logs.Heartbeat.PingSend && c.Delay() >= conf.Acceptor.Logs.Heartbeat.PingSendPrintDelay {
-				log.Println("[heartbeat][WebSocket][ping]:", c.Id(), c.RemoteAddr(), millisecond, timeNow.Format("2006-01-02 15:04:05.999"), c.Delay())
+				log.Println("[heartbeat][WebSocket][ping]:", c.Id(), c.RemoteAddr(), millisecond, timeNow.Format("2006-01-02 15:04:05.999"), len(pings), c.Delay())
 			}
 		}
 	}

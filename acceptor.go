@@ -42,7 +42,7 @@ func (a *Acceptor) pong(c ClientFace, arg int64) {
 	if _, ok := c.Ping()[arg]; ok {
 		millisecond := time.Now().UnixNano() / int64(time.Millisecond)
 		// to achieve a "continuous" effect, clear the container immediately after receiving any response
-		c.SetPing(make(map[int64]bool))
+		c.ClearPing()
 		// update the value of delay
 		c.SetDelay(millisecond - arg)
 	}

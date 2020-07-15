@@ -2,6 +2,7 @@ package gosocket
 
 import (
 	"log"
+	"sync"
 	"time"
 
 	"github.com/plhwin/gosocket/conf"
@@ -22,23 +23,32 @@ type Initiator struct {
 	events
 	conn  ConnFace
 	alive bool
+	mu    sync.RWMutex // mutex
 }
 
 func (i *Initiator) SetConn(c ConnFace) {
 	i.conn = c
-	i.alive = true
+	i.setAlive(true)
 }
 
 func (i *Initiator) onDisConn(interface{}) {
-	i.alive = false
+	i.setAlive(false)
 }
 
 func (i *Initiator) Alive() bool {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
 	return i.alive
 }
 
+func (i *Initiator) setAlive(b bool) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	i.alive = b
+}
+
 func (i *Initiator) Emit(event string, args interface{}, id string) {
-	if i.alive {
+	if i.Alive() {
 		i.conn.Emit(event, args, id)
 	}
 }
