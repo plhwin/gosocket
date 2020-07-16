@@ -123,12 +123,13 @@ func (a *Acceptor) Clients() map[string]ClientFace {
 
 func (a *Acceptor) ClientsByRoom(room string) (clientFaces []ClientFace) {
 	if v, ok := a.rooms.clients.Load(room); ok {
-		for client := range v.(map[*Client]bool) {
+		v.(*sync.Map).Range(func(k, _ interface{}) bool {
 			// What we need is the clientFace that injected by the user
-			if clientFace, ok := a.Client(client.id); ok {
+			if clientFace, ok := a.Client(k.(*Client).id); ok {
 				clientFaces = append(clientFaces, clientFace)
 			}
-		}
+			return true
+		})
 	}
 	return
 }
