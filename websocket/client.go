@@ -100,7 +100,6 @@ func (c *Client) write() {
 	for {
 		select {
 		case msg, ok := <-c.Out():
-			//c.Conn().SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				log.Println("[WebSocket][client][write] msg send channel has been closed:", msg, c.Id(), c.RemoteAddr())
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
@@ -110,11 +109,6 @@ func (c *Client) write() {
 				return
 			}
 		case <-ticker.C:
-			//c.Conn().SetWriteDeadline(time.Now().Add(writeWait))
-			//if err := c.Conn().WriteMessage(websocket.PingMessage, nil); err != nil {
-			//	return
-			//}
-
 			// when the Websocket server sends `ping` messages for x consecutive times
 			// but does not receive any` pong` messages back,
 			// the server will actively disconnect from this client
