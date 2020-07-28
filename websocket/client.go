@@ -144,7 +144,12 @@ func (c *Client) read(face ClientFace) {
 	defer func() {
 		c.Close(face)
 	}()
+	// Tolerate one heartbeat cycle
+	wait := time.Duration((conf.Acceptor.Heartbeat.PingMaxTimes+2)*conf.Acceptor.Heartbeat.PingInterval) * time.Second
 	for {
+		if wait > 0 {
+			c.conn.SetReadDeadline(time.Now().Add(wait))
+		}
 		_, msg, err := c.conn.ReadMessage()
 		if err != nil {
 			log.Println("[WebSocket][client][read] go away:", err, c.Id(), c.RemoteAddr())

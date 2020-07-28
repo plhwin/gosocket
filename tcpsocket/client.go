@@ -110,7 +110,12 @@ func (c *Client) read(face ClientFace) {
 	// tcp sticky packet: use bufio NewReader, specific characters \n separated
 	reader := bufio.NewReader(c.conn)
 	var end byte = '\n'
+	// Tolerate one heartbeat cycle
+	wait := time.Duration((conf.Acceptor.Heartbeat.PingMaxTimes+2)*conf.Acceptor.Heartbeat.PingInterval) * time.Second
 	for {
+		if wait > 0 {
+			c.conn.SetReadDeadline(time.Now().Add(wait))
+		}
 		msg, err := reader.ReadString(end)
 		if err != nil {
 			log.Println("[TCPSocket][client][read] go away:", err, c.Id(), c.RemoteAddr())
