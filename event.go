@@ -104,5 +104,9 @@ func (e *events) CallEvent(client interface{}, msg *protocol.Message) {
 		id = msg.Id
 	}
 
-	f.callFunc(client, args, id)
+	// 如果服务端处理某个具体客户端的某个具体事件需要耗费大量时间，
+	// 如果这里不并发处理，该客户端在事件处理完成前，会无法接受和响应客户端的其他事件（如：心跳，test等），
+	// 没有及时处理客户端的心跳，则会导致该客户端重连
+	// @todo 并发安全性大规模测试
+	go f.callFunc(client, args, id)
 }
