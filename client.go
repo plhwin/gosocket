@@ -52,7 +52,9 @@ type Client struct {
 func (c *Client) Init(a *Acceptor) {
 	c.id = c.genId()
 	c.acceptor = a
-	// set a capacity N for the data transmission pipeline as a buffer. if the client has not received it, the pipeline will always keep the latest N
+	// set a capacity N for the data transmission pipeline as a buffer.
+	// if the client has not received it,
+	// the pipeline will always keep the latest N
 	c.out = make(chan string, 500)
 	c.stopOut = make(chan bool)
 	c.rooms = new(sync.Map)
@@ -144,6 +146,11 @@ func (c *Client) Emit(event string, args interface{}, id string) {
 		log.Println("receive the stop signal, the socket was closed", c.Id(), c.RemoteAddr())
 		return
 	case c.out <- msg:
+	default:
+		// the capacity of channel was full, data dropped，
+		// it must be sent without blocking here,
+		// in the broadcast scenario, blocking sending will cause the normal network clients to be unable to receive data
+		log.Println("message not sent:", c.id, c.remoteAddr, msg)
 	}
 }
 

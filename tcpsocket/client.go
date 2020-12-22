@@ -74,6 +74,13 @@ func (c *Client) write() {
 				log.Println("[TCPSocket][client][write] msg send channel has been closed:", msg, c.Id(), c.RemoteAddr())
 				return
 			}
+
+			// for test start: simulate sending delay
+			//if strings.HasPrefix(c.RemoteAddr().String(), "127.0.0.1") {
+			//	time.Sleep(time.Second * 5)
+			//}
+			// for test end
+
 			if n, err := c.conn.Write([]byte(msg + "\n")); err != nil {
 				log.Println("[TCPSocket][client][write] error:", err, n, msg, c.Id(), c.RemoteAddr())
 				return
