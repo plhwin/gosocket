@@ -6,11 +6,11 @@ import (
 	"strings"
 )
 
-type Message struct {
-	Event string
-	Args  string
-	Id    string
-}
+//type Message struct {
+//	Event string
+//	Args  string
+//	Id    string
+//}
 
 type counter struct {
 	start      int

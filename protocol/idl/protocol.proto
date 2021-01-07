@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package protocol;
+
+message Message {
+    string event = 1;
+    string args = 2;
+    string id = 3;
+}
