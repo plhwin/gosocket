@@ -111,7 +111,7 @@ func Decode(text string) (msg *Message, err error) {
 }
 
 // The message is sent to the client in the format of the agreed protocol
-func Encode(event string, args interface{}, id string) (msg string, err error) {
+func Encode(event string, args interface{}, id string) (msg []byte, err error) {
 	body := "\"" + event + "\""
 	if args != nil {
 		var jsonArgs []byte
@@ -126,6 +126,6 @@ func Encode(event string, args interface{}, id string) (msg string, err error) {
 	if id != "" {
 		body += ",\"" + id + "\""
 	}
-	msg = "[" + body + "]"
+	msg = []byte("[" + body + "]")
 	return
 }

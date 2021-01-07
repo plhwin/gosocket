@@ -44,15 +44,15 @@ func Receive(i *gosocket.Initiator, conn net.Conn, c ConnFace) {
 func (c *Conn) read(face ConnFace) {
 	defer c.Close(face)
 	reader := bufio.NewReader(c.conn)
-	var end byte = '\n'
+
 	for {
-		msg, err := reader.ReadString(end)
+		msg, err := reader.ReadString(msgEnd)
 		if err != nil {
 			log.Println("[TCPSocket][conn][read] error:", err, msg)
 			break
 		}
 		// parse the message to determine what the client connection wants to do
-		msg = strings.Replace(msg, string([]byte{end}), "", -1)
+		msg = strings.Replace(msg, string(msgEnd), "", -1)
 		message, err := protocol.Decode(msg)
 		if err != nil {
 			log.Println("[TCPSocket][conn][read] msg decode error:", err, msg)
@@ -66,7 +66,7 @@ func (c *Conn) read(face ConnFace) {
 func (c *Conn) write() {
 	defer c.conn.Close()
 	for msg := range c.Out() {
-		if _, err := c.conn.Write([]byte(msg + "\n")); err != nil {
+		if _, err := c.conn.Write(append(msg, msgEnd)); err != nil {
 			log.Println("[TCPSocket][conn][write] error:", err, msg)
 			break
 		}

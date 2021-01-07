@@ -17,7 +17,7 @@ type ConnFace interface {
 	Initiator() *Initiator                                     // get *Initiator
 	Ping() map[int64]bool                                      // get ping
 	Delay() int64                                              // obtain a time delay that reflects the quality of the connection between the two ends
-	Out() chan string                                          // get the message send channel
+	Out() chan []byte                                          // get the message send channel
 	SetId(string)                                              // set conn id
 	SetPing(map[int64]bool)                                    // set ping
 	SetDelay(int64)                                            // set delay
@@ -28,7 +28,7 @@ type Conn struct {
 	id         string         // Conn id
 	remoteAddr net.Addr       // Conn remoteAddr
 	initiator  *Initiator     // event processing function register
-	out        chan string    // message send channel
+	out        chan []byte    // message send channel
 	ping       map[int64]bool // ping
 	delay      int64          // delay
 }
@@ -36,7 +36,7 @@ type Conn struct {
 func (c *Conn) Init(i *Initiator) {
 	c.initiator = i
 	// set a capacity N for the data transmission pipeline as a buffer. if the Conn has not received it, the pipeline will always keep the latest N
-	c.out = make(chan string, 500)
+	c.out = make(chan []byte, 500)
 	c.ping = make(map[int64]bool)
 }
 
@@ -60,7 +60,7 @@ func (c *Conn) Delay() int64 {
 	return c.delay
 }
 
-func (c *Conn) Out() chan string {
+func (c *Conn) Out() chan []byte {
 	return c.out
 }
 

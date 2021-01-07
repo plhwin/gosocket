@@ -29,7 +29,7 @@ type ClientFace interface {
 	Rooms() map[string]bool                                  // get all rooms joined by the client
 	Ping() map[int64]bool                                    // get ping
 	Delay() int64                                            // obtain a time delay that reflects the quality of the connection between the two ends
-	Out() chan string                                        // message send channel
+	Out() chan []byte                                        // message send channel
 	StopOut() chan bool                                      // stop send message signal channel
 	SetPing(int64, bool)                                     // set ping
 	ClearPing()                                              // clear ping
@@ -42,7 +42,7 @@ type Client struct {
 	remoteAddr net.Addr       // client remoteAddr
 	acceptor   *Acceptor      // event processing function register
 	rooms      *sync.Map      // map[string]bool all rooms joined by the client, used to quickly join and leave the rooms
-	out        chan string    // message send channel
+	out        chan []byte    // message send channel
 	stopOut    chan bool      // stop send message signal channel
 	ping       map[int64]bool // ping
 	mu         sync.RWMutex   // mutex
@@ -55,7 +55,7 @@ func (c *Client) Init(a *Acceptor) {
 	// set a capacity N for the data transmission pipeline as a buffer.
 	// if the client has not received it,
 	// the pipeline will always keep the latest N
-	c.out = make(chan string, 500)
+	c.out = make(chan []byte, 500)
 	c.stopOut = make(chan bool)
 	c.rooms = new(sync.Map)
 	c.ping = make(map[int64]bool)
@@ -94,7 +94,7 @@ func (c *Client) Delay() int64 {
 	return c.delay
 }
 
-func (c *Client) Out() chan string {
+func (c *Client) Out() chan []byte {
 	return c.out
 }
 

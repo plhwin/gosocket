@@ -14,6 +14,10 @@ import (
 	"github.com/plhwin/gosocket/protocol"
 )
 
+const (
+	msgEnd byte = '\n'
+)
+
 type ClientFace interface {
 	gosocket.ClientFace
 	init(net.Conn, *gosocket.Acceptor) // init the client
@@ -67,11 +71,12 @@ func (c *Client) write() {
 		// c.Out() channel must be close by it's sender
 		close(c.StopOut())
 	}()
+
 	for {
 		select {
 		case msg, ok := <-c.Out():
 			if !ok {
-				log.Println("[TCPSocket][client][write] msg send channel has been closed:", msg, c.Id(), c.RemoteAddr())
+				log.Println("[TCPSocket][client][write] msg send channel has been closed:", string(msg), c.Id(), c.RemoteAddr())
 				return
 			}
 
@@ -81,8 +86,8 @@ func (c *Client) write() {
 			//}
 			// for test end
 
-			if n, err := c.conn.Write([]byte(msg + "\n")); err != nil {
-				log.Println("[TCPSocket][client][write] error:", err, n, msg, c.Id(), c.RemoteAddr())
+			if n, err := c.conn.Write(append(msg, msgEnd)); err != nil {
+				log.Println("[TCPSocket][client][write] error:", err, n, string(msg), c.Id(), c.RemoteAddr())
 				return
 			}
 		case <-ticker.C:
@@ -98,7 +103,7 @@ func (c *Client) write() {
 			timeNow := time.Now()
 			millisecond := timeNow.UnixNano() / int64(time.Millisecond)
 			if msg, err := protocol.Encode(gosocket.EventPing, millisecond, ""); err == nil {
-				if _, err := c.conn.Write([]byte(msg + "\n")); err != nil {
+				if _, err := c.conn.Write(append(msg, msgEnd)); err != nil {
 					return
 				}
 				c.SetPing(millisecond, true)
@@ -116,20 +121,20 @@ func (c *Client) read(face ClientFace) {
 	}()
 	// tcp sticky packet: use bufio NewReader, specific characters \n separated
 	reader := bufio.NewReader(c.conn)
-	var end byte = '\n'
+
 	// Tolerate one heartbeat cycle
 	wait := time.Duration((conf.Acceptor.Heartbeat.PingMaxTimes+2)*conf.Acceptor.Heartbeat.PingInterval) * time.Second
 	for {
 		if wait > 0 {
 			c.conn.SetReadDeadline(time.Now().Add(wait))
 		}
-		msg, err := reader.ReadString(end)
+		msg, err := reader.ReadString(msgEnd)
 		if err != nil {
 			log.Println("[TCPSocket][client][read] go away:", err, c.Id(), c.RemoteAddr())
 			break
 		}
 		// parse the message to determine what the client connection wants to do
-		msg = strings.Replace(msg, string([]byte{end}), "", -1)
+		msg = strings.Replace(msg, string([]byte{msgEnd}), "", -1)
 		message, err := protocol.Decode(msg)
 		if err != nil {
 			log.Println("[TCPSocket][client][read] msg decode error:", err, msg, c.Id(), c.RemoteAddr())

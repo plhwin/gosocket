@@ -105,7 +105,7 @@ func (c *Client) write() {
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
-			if err := c.conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
+			if err := c.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
 				return
 			}
 		case <-ticker.C:
@@ -122,7 +122,7 @@ func (c *Client) write() {
 			timeNow := time.Now()
 			millisecond := timeNow.UnixNano() / int64(time.Millisecond)
 			if msg, err := protocol.Encode(gosocket.EventPing, millisecond, ""); err == nil {
-				if err := c.conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
+				if err := c.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
 					return
 				}
 				c.SetPing(millisecond, true)
