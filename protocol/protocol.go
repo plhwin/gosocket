@@ -86,10 +86,10 @@ func cutFromRight(text string) (left, right string, err error) {
 }
 
 // Parse message ["$event",$args,"$identity"]
-func Decode(text string) (msg *Message, err error) {
+func Decode(text []byte) (msg *Message, err error) {
 	msg = new(Message)
 	var event, args string
-	if event, args, err = cutFromLeft(text); err != nil {
+	if event, args, err = cutFromLeft(string(text)); err != nil {
 		return
 	}
 	if event == "" {

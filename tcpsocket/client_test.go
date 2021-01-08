@@ -1,6 +1,7 @@
 package tcpsocket
 
 import (
+	"bytes"
 	"fmt"
 	"testing"
 )
@@ -18,4 +19,8 @@ func TestAppendByte(t *testing.T) {
 
 	fmt.Println("addString:", addString)
 	fmt.Println("addByte:", addByte, len(addByte), string(addByte))
+
+	// remove msgEnd
+	removeByte := bytes.TrimSuffix(addByte, []byte{msgEnd})
+	fmt.Println("removeByte:", removeByte, len(removeByte), string(removeByte))
 }

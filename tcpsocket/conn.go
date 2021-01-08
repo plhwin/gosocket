@@ -2,9 +2,9 @@ package tcpsocket
 
 import (
 	"bufio"
+	"bytes"
 	"log"
 	"net"
-	"strings"
 
 	"github.com/plhwin/gosocket"
 	"github.com/plhwin/gosocket/protocol"
@@ -46,13 +46,13 @@ func (c *Conn) read(face ConnFace) {
 	reader := bufio.NewReader(c.conn)
 
 	for {
-		msg, err := reader.ReadString(msgEnd)
+		msg, err := reader.ReadBytes(msgEnd)
 		if err != nil {
 			log.Println("[TCPSocket][conn][read] error:", err, msg)
 			break
 		}
 		// parse the message to determine what the client connection wants to do
-		msg = strings.Replace(msg, string(msgEnd), "", -1)
+		msg = bytes.TrimSuffix(msg, []byte{msgEnd})
 		message, err := protocol.Decode(msg)
 		if err != nil {
 			log.Println("[TCPSocket][conn][read] msg decode error:", err, msg)

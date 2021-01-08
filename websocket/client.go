@@ -151,11 +151,11 @@ func (c *Client) read(face ClientFace) {
 			// error reading the message, break out of the loop,
 			// the function of defer will executes the instruction to disconnect the client
 		}
-		c.process(face, string(msg))
+		c.process(face, msg)
 	}
 }
 
-func (c *Client) process(face ClientFace, msg string) {
+func (c *Client) process(face ClientFace, msg []byte) {
 	// parse the message to determine what the client connection wants to do
 	message, err := protocol.Decode(msg)
 	if err != nil {
