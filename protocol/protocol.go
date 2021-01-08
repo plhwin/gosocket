@@ -112,16 +112,25 @@ func Decode(text []byte) (msg *Message, err error) {
 
 // The message is sent to the client in the format of the agreed protocol
 func Encode(event string, args interface{}, id string) (msg []byte, err error) {
-	body := "\"" + event + "\""
+	if event == "" {
+		err = errors.New("event can not be empty")
+		return
+	}
+
+	// args: interface to json string
+	argStr := ""
 	if args != nil {
-		var jsonArgs []byte
-		jsonArgs, err = json.Marshal(&args)
-		if err != nil {
+		var argBytes []byte
+		if argBytes, err = json.Marshal(&args); err != nil {
 			return
 		}
-		if strArgs := string(jsonArgs); strArgs != "" {
-			body += "," + strArgs
-		}
+		argStr = string(argBytes)
+	}
+
+	// text transport protocol
+	body := "\"" + event + "\""
+	if argStr != "" {
+		body += "," + argStr
 	}
 	if id != "" {
 		body += ",\"" + id + "\""
