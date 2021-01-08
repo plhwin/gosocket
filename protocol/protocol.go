@@ -4,13 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"strings"
-)
 
-//type Message struct {
-//	Event string
-//	Args  string
-//	Id    string
-//}
+	"github.com/gogo/protobuf/proto"
+	"github.com/plhwin/gosocket/conf"
+)
 
 type counter struct {
 	start      int
@@ -86,24 +83,33 @@ func cutFromRight(text string) (left, right string, err error) {
 }
 
 // Parse message ["$event",$args,"$identity"]
-func Decode(text []byte) (msg *Message, err error) {
+func Decode(text []byte, transportProtocol string) (msg *Message, err error) {
 	msg = new(Message)
-	var event, args string
-	if event, args, err = cutFromLeft(string(text)); err != nil {
-		return
-	}
-	if event == "" {
-		err = errors.New("wrong message format")
-		return
-	}
-	msg.Event, msg.Args = event, args
-	// if end with "(quote), it is possible to carry the client id
-	// it means that the data type of the client id must be a string
-	if strings.HasSuffix(msg.Args, "\"") {
-		if left, right, cutErr := cutFromRight(msg.Args); cutErr == nil {
-			if msg.Args != "\""+right+"\"" {
-				msg.Args = left
-				msg.Id = right
+
+	if transportProtocol == conf.TransportProtocolBinary {
+		// transport protocol - binary
+		if err = proto.Unmarshal(text, msg); err != nil {
+			return
+		}
+	} else {
+		// transport protocol - text
+		var event, args string
+		if event, args, err = cutFromLeft(string(text)); err != nil {
+			return
+		}
+		if event == "" {
+			err = errors.New("wrong message format")
+			return
+		}
+		msg.Event, msg.Args = event, args
+		// if end with "(quote), it is possible to carry the client id
+		// it means that the data type of the client id must be a string
+		if strings.HasSuffix(msg.Args, "\"") {
+			if left, right, cutErr := cutFromRight(msg.Args); cutErr == nil {
+				if msg.Args != "\""+right+"\"" {
+					msg.Args = left
+					msg.Id = right
+				}
 			}
 		}
 	}
@@ -111,7 +117,7 @@ func Decode(text []byte) (msg *Message, err error) {
 }
 
 // The message is sent to the client in the format of the agreed protocol
-func Encode(event string, args interface{}, id string) (msg []byte, err error) {
+func Encode(event string, args interface{}, id, transportProtocol string) (msg []byte, err error) {
 	if event == "" {
 		err = errors.New("event can not be empty")
 		return
@@ -127,14 +133,26 @@ func Encode(event string, args interface{}, id string) (msg []byte, err error) {
 		argStr = string(argBytes)
 	}
 
-	// text transport protocol
-	body := "\"" + event + "\""
-	if argStr != "" {
-		body += "," + argStr
+	if transportProtocol == conf.TransportProtocolBinary {
+		// transport protocol - binary
+		message := new(Message)
+		message.Event = event
+		message.Args = argStr
+		message.Id = id
+
+		if msg, err = proto.Marshal(message); err != nil {
+			return
+		}
+	} else {
+		// transport protocol - text
+		body := "\"" + event + "\""
+		if argStr != "" {
+			body += "," + argStr
+		}
+		if id != "" {
+			body += ",\"" + id + "\""
+		}
+		msg = []byte("[" + body + "]")
 	}
-	if id != "" {
-		body += ",\"" + id + "\""
-	}
-	msg = []byte("[" + body + "]")
 	return
 }

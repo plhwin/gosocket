@@ -133,7 +133,7 @@ func (c *Client) Emit(event string, args interface{}, id string) {
 			log.Println("gosocket client emit panic: ", r, c.Id(), c.RemoteAddr())
 		}
 	}()
-	msg, err := protocol.Encode(event, args, id)
+	msg, err := protocol.Encode(event, args, id, conf.Acceptor.TransportProtocol.Send)
 	if err != nil {
 		log.Println("[GoSocket][Emit] encode error:", err, event, args, id, c.Id(), c.RemoteAddr())
 		return

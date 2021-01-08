@@ -7,20 +7,26 @@ import (
 	"github.com/spf13/viper"
 )
 
+const (
+	TransportProtocolText   = "text"
+	TransportProtocolBinary = "binary"
+)
+
 var (
-	Acceptor = acceptor{
-		Heartbeat: heartbeat{
-			PingInterval: 5,
-			PingMaxTimes: 2,
-		},
-	}
+	Acceptor  acceptor
 	Initiator initiator
 )
 
 type acceptor struct {
-	Websocket websocket
-	Heartbeat heartbeat
-	Logs      logs
+	TransportProtocol transportProtocol
+	Websocket         websocket
+	Heartbeat         heartbeat
+	Logs              logs
+}
+
+type transportProtocol struct {
+	Send    string
+	Receive string
 }
 
 type websocket struct {
@@ -51,7 +57,8 @@ type room struct {
 }
 
 type initiator struct {
-	Logs logs
+	TransportProtocol transportProtocol
+	Logs              logs
 }
 
 func Init(configFile string) {
@@ -93,5 +100,40 @@ func initConf() {
 			},
 		},
 	}
+
+	// set default value for acceptor heartbeat
+	if Acceptor.Heartbeat.PingInterval <= 0 {
+		Acceptor.Heartbeat.PingInterval = 5
+	}
+	if Acceptor.Heartbeat.PingMaxTimes <= 0 {
+		Acceptor.Heartbeat.PingMaxTimes = 2
+	}
+
+	// set default value for transport protocol
+	switch viper.GetString("acceptor.transportProtocol.send") {
+	case TransportProtocolBinary:
+		Acceptor.TransportProtocol.Send = TransportProtocolBinary
+	default:
+		Acceptor.TransportProtocol.Send = TransportProtocolText
+	}
+	switch viper.GetString("acceptor.transportProtocol.receive") {
+	case TransportProtocolBinary:
+		Acceptor.TransportProtocol.Receive = TransportProtocolBinary
+	default:
+		Acceptor.TransportProtocol.Receive = TransportProtocolText
+	}
+	switch viper.GetString("initiator.transportProtocol.send") {
+	case TransportProtocolBinary:
+		Initiator.TransportProtocol.Send = TransportProtocolBinary
+	default:
+		Initiator.TransportProtocol.Send = TransportProtocolText
+	}
+	switch viper.GetString("initiator.transportProtocol.receive") {
+	case TransportProtocolBinary:
+		Initiator.TransportProtocol.Receive = TransportProtocolBinary
+	default:
+		Initiator.TransportProtocol.Receive = TransportProtocolText
+	}
+
 	log.Printf("[gosocket][config]:\nAcceptor: %+v \nInitiator: %+v \n\n", Acceptor, Initiator)
 }

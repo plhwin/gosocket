@@ -6,6 +6,8 @@ import (
 	"log"
 	"net"
 
+	"github.com/plhwin/gosocket/conf"
+
 	"github.com/plhwin/gosocket"
 	"github.com/plhwin/gosocket/protocol"
 )
@@ -48,14 +50,14 @@ func (c *Conn) read(face ConnFace) {
 	for {
 		msg, err := reader.ReadBytes(msgEnd)
 		if err != nil {
-			log.Println("[TCPSocket][conn][read] error:", err, msg)
+			log.Println("[TCPSocket][conn][read] error:", err, msg, string(msg))
 			break
 		}
 		// parse the message to determine what the client connection wants to do
 		msg = bytes.TrimSuffix(msg, []byte{msgEnd})
-		message, err := protocol.Decode(msg)
+		message, err := protocol.Decode(msg, conf.Initiator.TransportProtocol.Receive)
 		if err != nil {
-			log.Println("[TCPSocket][conn][read] msg decode error:", err, msg)
+			log.Println("[TCPSocket][conn][read] msg decode error:", err, msg, string(msg))
 			continue
 		}
 		// bind function handler
@@ -67,7 +69,7 @@ func (c *Conn) write() {
 	defer c.conn.Close()
 	for msg := range c.Out() {
 		if _, err := c.conn.Write(append(msg, msgEnd)); err != nil {
-			log.Println("[TCPSocket][conn][write] error:", err, msg)
+			log.Println("[TCPSocket][conn][write] error:", err, msg, string(msg))
 			break
 		}
 	}

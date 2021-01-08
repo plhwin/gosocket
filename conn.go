@@ -4,6 +4,7 @@ import (
 	"log"
 	"net"
 
+	"github.com/plhwin/gosocket/conf"
 	"github.com/plhwin/gosocket/protocol"
 )
 
@@ -90,7 +91,7 @@ func (c *Conn) Emit(event string, args interface{}, id string) {
 			log.Println("gosocket conn emit panic: ", r, c.Id(), c.RemoteAddr())
 		}
 	}()
-	msg, err := protocol.Encode(event, args, id)
+	msg, err := protocol.Encode(event, args, id, conf.Initiator.TransportProtocol.Send)
 	if err != nil {
 		log.Println("Emit encode error:", err, event, args, id, c.Id(), c.RemoteAddr())
 		return

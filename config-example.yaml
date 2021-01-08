@@ -1,4 +1,7 @@
 acceptor:
+  transportProtocol:
+    send: "text" # text or binary, as a acceptor, which transport protocol is used to send message, the default value is text
+    receive: "text" # text or binary, as a acceptor, which transport protocol is used to receive message , the default value is text
   websocket: # acceptor websocket specific configuration
     remoteAddrHeaderName: "" # Use custom header name and controlled by the developers to avoid fake IP, if using proxy
   heartbeat:
@@ -15,6 +18,9 @@ acceptor:
       leave: true # client leave room
     leaveAll: true # client leave from acceptor and leave all the rooms
 initiator:
+  transportProtocol:
+    send: "text" # text or binary, as a initiator, which transport protocol is used to send message, the default value is text
+    receive: "text" # text or binary, as a initiator, which transport protocol is used to receive message , the default value is text
   logs:
     heartbeat: # The current heartbeat mode is: server send a ping message to the client, and the client must reply a pong message
       pingReceive: false # Receive ping message from server
