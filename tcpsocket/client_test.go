@@ -7,6 +7,8 @@ import (
 )
 
 func TestAppendByte(t *testing.T) {
+	var msgEnd byte = '\n'
+
 	msg := "这是test消息！"
 	msgByte := []byte(msg)
 

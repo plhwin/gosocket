@@ -1,8 +1,7 @@
 package tcpsocket
 
 import (
-	"bufio"
-	"bytes"
+	"io"
 	"log"
 	"net"
 	"time"
@@ -12,10 +11,6 @@ import (
 	"github.com/plhwin/gosocket"
 
 	"github.com/plhwin/gosocket/protocol"
-)
-
-const (
-	msgEnd byte = '\n'
 )
 
 type ClientFace interface {
@@ -86,7 +81,13 @@ func (c *Client) write() {
 			//}
 			// for test end
 
-			if n, err := c.conn.Write(append(msg, msgEnd)); err != nil {
+			pkg, err := protocol.EnPack(msg)
+			if err != nil {
+				log.Println("[TCPSocket][client][write] protocol EnPack error:", err, string(msg), c.Id(), c.RemoteAddr())
+				return
+			}
+
+			if n, err := c.conn.Write(pkg.Bytes()); err != nil {
 				log.Println("[TCPSocket][client][write] error:", err, n, string(msg), c.Id(), c.RemoteAddr())
 				return
 			}
@@ -103,7 +104,11 @@ func (c *Client) write() {
 			timeNow := time.Now()
 			millisecond := timeNow.UnixNano() / int64(time.Millisecond)
 			if msg, err := protocol.Encode(gosocket.EventPing, millisecond, "", conf.Acceptor.TransportProtocol.Send); err == nil {
-				if _, err := c.conn.Write(append(msg, msgEnd)); err != nil {
+				pkg, err := protocol.EnPack(msg)
+				if err != nil {
+					return
+				}
+				if _, err := c.conn.Write(pkg.Bytes()); err != nil {
 					return
 				}
 				c.SetPing(millisecond, true)
@@ -119,8 +124,9 @@ func (c *Client) read(face ClientFace) {
 	defer func() {
 		c.Close(face)
 	}()
-	// tcp sticky packet: use bufio NewReader, specific characters \n separated
-	reader := bufio.NewReader(c.conn)
+
+	buf := make([]byte, 0, 4096) // 临时缓冲区的buffer
+	readBuf := make([]byte, 256) // 每次读取多大buffer
 
 	// Tolerate one heartbeat cycle
 	wait := time.Duration((conf.Acceptor.Heartbeat.PingMaxTimes+2)*conf.Acceptor.Heartbeat.PingInterval) * time.Second
@@ -128,21 +134,33 @@ func (c *Client) read(face ClientFace) {
 		if wait > 0 {
 			c.conn.SetReadDeadline(time.Now().Add(wait))
 		}
-		msg, err := reader.ReadBytes(msgEnd)
+
+		n, err := c.conn.Read(readBuf)
 		if err != nil {
-			log.Println("[TCPSocket][client][read] go away:", err, c.Id(), c.RemoteAddr())
+			if err == io.EOF {
+				log.Println("[TCPSocket][client][read] connection was closed:", err, c.Id(), c.RemoteAddr())
+			} else {
+				log.Println("[TCPSocket][client][read] connection read error:", err, c.Id(), c.RemoteAddr())
+			}
 			break
 		}
-		// parse the message to determine what the client connection wants to do
-		// remove msgEnd
-		msg = bytes.TrimSuffix(msg, []byte{msgEnd})
-		message, err := protocol.Decode(msg, conf.Acceptor.TransportProtocol.Receive)
-		if err != nil {
-			log.Println("[TCPSocket][client][read] msg decode error:", err, msg, string(msg), c.Id(), c.RemoteAddr())
+		buf = append(buf, readBuf[:n]...)
+
+		// TCP拆包：一次读取可能读到到一条或者多条符合传输协议的内容，通常readBuf设置的比协议消息体大
+		// 也可能什么内容也读取不到，要等待下一次读取与本次未处理的内容拼接再试，通常readBuf设置的比协议消息体小
+		var data [][]byte
+		if data, err = protocol.DePack(&buf); err != nil {
+			log.Println("[TCPSocket][client][read] protocol DePack error:", err, c.Id(), c.RemoteAddr())
 			continue
 		}
-
-		// bind function handler
-		c.Acceptor().CallEvent(face, message)
+		for _, row := range data {
+			message, decodeErr := protocol.Decode(row, conf.Acceptor.TransportProtocol.Receive)
+			if decodeErr != nil {
+				log.Println("[TCPSocket][client][read] protocol Decode error:", decodeErr, row, string(row), c.Id(), c.RemoteAddr())
+				continue
+			}
+			// bind function handler
+			c.Acceptor().CallEvent(face, message)
+		}
 	}
 }
