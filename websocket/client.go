@@ -97,6 +97,12 @@ func (c *Client) write() {
 		// c.Out() channel must be close by it's sender
 		close(c.StopOut())
 	}()
+
+	messageType := websocket.TextMessage
+	if conf.Acceptor.TransportProtocol.Send == conf.TransportProtocolBinary {
+		messageType = websocket.BinaryMessage
+	}
+
 	for {
 		select {
 		case msg, ok := <-c.Out():
@@ -105,7 +111,7 @@ func (c *Client) write() {
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
-			if err := c.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
+			if err := c.conn.WriteMessage(messageType, msg); err != nil {
 				return
 			}
 		case <-ticker.C:
@@ -122,7 +128,7 @@ func (c *Client) write() {
 			timeNow := time.Now()
 			millisecond := timeNow.UnixNano() / int64(time.Millisecond)
 			if msg, err := protocol.Encode(gosocket.EventPing, millisecond, "", conf.Acceptor.TransportProtocol.Send); err == nil {
-				if err := c.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
+				if err := c.conn.WriteMessage(messageType, msg); err != nil {
 					return
 				}
 				c.SetPing(millisecond, true)
