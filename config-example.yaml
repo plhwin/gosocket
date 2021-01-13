@@ -11,8 +11,8 @@ acceptor:
     heartbeat:
       pingSend: true # Server send a ping message to the client
       pingSendPrintDelay: 0 # Unit:ms, Only print logs longer than x milliseconds, the default value is 0
-      pingReceive: false # Receive ping message from client
-      pongReceive: false # Receive pong message from client
+      pingReceive: true # Receive ping message from client
+      pongReceive: true # Receive pong message from client
     room:
       join: true # client join room
       leave: true # client leave room
@@ -23,5 +23,5 @@ initiator:
     receive: "text" # text or binary, as a initiator, which transport protocol is used to receive message , the default value is text
   logs:
     heartbeat: # The current heartbeat mode is: server send a ping message to the client, and the client must reply a pong message
-      pingReceive: false # Receive ping message from server
-      pongReceive: false # Receive pong message from server
+      pingReceive: true # Receive ping message from server
+      pongReceive: true # Receive pong message from server
