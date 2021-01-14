@@ -83,7 +83,7 @@ func TestEncodeAndDecode(t *testing.T) {
 	fmt.Printf("req: %+v %+v %+v \n\n", req, event, id)
 
 	var msg []byte
-	msg, err = Encode(event, req, id, conf.TransportProtocolBinary)
+	msg, err = Encode(event, req, id, conf.TransportSerializeProtobuf)
 	if err != nil {
 		fmt.Println("Encode error:", err, event, req, id)
 		os.Exit(2)
@@ -98,7 +98,7 @@ func TestEncodeAndDecode(t *testing.T) {
 	fmt.Println("msgrem:", msg)
 
 	var message *Message
-	message, err = Decode(msg, conf.TransportProtocolBinary)
+	message, err = Decode(msg, conf.TransportSerializeProtobuf)
 	if err != nil {
 		fmt.Println("Decode error:", err, event, req, id)
 		os.Exit(3)

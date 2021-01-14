@@ -103,7 +103,7 @@ func (c *Client) write() {
 			}
 			timeNow := time.Now()
 			millisecond := timeNow.UnixNano() / int64(time.Millisecond)
-			if msg, err := protocol.Encode(gosocket.EventPing, millisecond, "", conf.Acceptor.TransportProtocol.Send); err == nil {
+			if msg, err := protocol.Encode(gosocket.EventPing, millisecond, "", conf.Acceptor.Transport.Send.Serialize); err == nil {
 				pkg, err := protocol.EnPack(msg)
 				if err != nil {
 					return
@@ -154,7 +154,7 @@ func (c *Client) read(face ClientFace) {
 			continue
 		}
 		for _, row := range data {
-			message, decodeErr := protocol.Decode(row, conf.Acceptor.TransportProtocol.Receive)
+			message, decodeErr := protocol.Decode(row, conf.Acceptor.Transport.Receive.Serialize)
 			if decodeErr != nil {
 				log.Println("[TCPSocket][client][read] protocol Decode error:", decodeErr, row, string(row), c.Id(), c.RemoteAddr())
 				continue

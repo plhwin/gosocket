@@ -68,7 +68,7 @@ func (c *Conn) read(face ConnFace) {
 			continue
 		}
 		for _, row := range data {
-			message, decodeErr := protocol.Decode(row, conf.Initiator.TransportProtocol.Receive)
+			message, decodeErr := protocol.Decode(row, conf.Initiator.Transport.Receive.Serialize)
 			if decodeErr != nil {
 				log.Println("[TCPSocket][conn][read] protocol Decode error:", decodeErr, row, string(row), c.Id(), c.RemoteAddr())
 				continue

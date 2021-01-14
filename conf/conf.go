@@ -8,8 +8,19 @@ import (
 )
 
 const (
-	TransportProtocolText   = "text"
-	TransportProtocolBinary = "binary"
+	// Websocket Message Type
+	WebsocketMessageTypeText   = "Text"
+	WebsocketMessageTypeBinary = "Binary"
+
+	// Serialize
+	TransportSerializeText     = "Text"
+	TransportSerializeProtobuf = "Protobuf"
+
+	// Compress
+	TransportCompressNone   = "None"
+	TransportCompressSnappy = "Snappy"
+	TransportCompressFLate  = "FLate"
+	TransportCompressGzip   = "Gzip"
 )
 
 var (
@@ -18,18 +29,24 @@ var (
 )
 
 type acceptor struct {
-	TransportProtocol transportProtocol
-	Websocket         websocket
-	Heartbeat         heartbeat
-	Logs              logs
+	Transport transport
+	Websocket websocket
+	Heartbeat heartbeat
+	Logs      logs
 }
 
-type transportProtocol struct {
-	Send    string
-	Receive string
+type transport struct {
+	Send    transportConfig
+	Receive transportConfig
+}
+
+type transportConfig struct {
+	Serialize string
+	Compress  string
 }
 
 type websocket struct {
+	MessageType          string
 	RemoteAddrHeaderName string
 }
 
@@ -57,8 +74,8 @@ type room struct {
 }
 
 type initiator struct {
-	TransportProtocol transportProtocol
-	Logs              logs
+	Transport transport
+	Logs      logs
 }
 
 func Init(configFile string) {
@@ -70,8 +87,23 @@ func Init(configFile string) {
 }
 
 func initConf() {
+	websocketMessageTypes := []string{WebsocketMessageTypeText, WebsocketMessageTypeBinary}
+	serializations := []string{TransportSerializeText, TransportSerializeProtobuf}
+	compresses := []string{TransportCompressNone, TransportCompressSnappy, TransportCompressFLate, TransportCompressGzip}
+
 	Acceptor = acceptor{
+		Transport: transport{
+			Send: transportConfig{
+				Serialize: getVal(viper.GetString("acceptor.transport.send.serialize"), serializations, TransportSerializeText),
+				Compress:  getVal(viper.GetString("acceptor.transport.send.compress"), compresses, TransportCompressNone),
+			},
+			Receive: transportConfig{
+				Serialize: getVal(viper.GetString("acceptor.transport.receive.serialize"), serializations, TransportSerializeText),
+				Compress:  getVal(viper.GetString("acceptor.transport.receive.compress"), compresses, TransportCompressNone),
+			},
+		},
 		Websocket: websocket{
+			MessageType:          getVal(viper.GetString("acceptor.websocket.messageType"), websocketMessageTypes, WebsocketMessageTypeText),
 			RemoteAddrHeaderName: viper.GetString("acceptor.websocket.remoteAddrHeaderName"),
 		},
 		Heartbeat: heartbeat{
@@ -93,6 +125,16 @@ func initConf() {
 		},
 	}
 	Initiator = initiator{
+		Transport: transport{
+			Send: transportConfig{
+				Serialize: getVal(viper.GetString("initiator.transport.send.serialize"), serializations, TransportSerializeText),
+				Compress:  getVal(viper.GetString("initiator.transport.send.compress"), compresses, TransportCompressNone),
+			},
+			Receive: transportConfig{
+				Serialize: getVal(viper.GetString("initiator.transport.receive.serialize"), serializations, TransportSerializeText),
+				Compress:  getVal(viper.GetString("initiator.transport.receive.compress"), compresses, TransportCompressNone),
+			},
+		},
 		Logs: logs{
 			Heartbeat: heartbeatLogs{
 				PingReceive: viper.GetBool("initiator.logs.heartbeat.pingReceive"),
@@ -109,31 +151,20 @@ func initConf() {
 		Acceptor.Heartbeat.PingMaxTimes = 2
 	}
 
-	// set default value for transport protocol
-	switch viper.GetString("acceptor.transportProtocol.send") {
-	case TransportProtocolBinary:
-		Acceptor.TransportProtocol.Send = TransportProtocolBinary
-	default:
-		Acceptor.TransportProtocol.Send = TransportProtocolText
-	}
-	switch viper.GetString("acceptor.transportProtocol.receive") {
-	case TransportProtocolBinary:
-		Acceptor.TransportProtocol.Receive = TransportProtocolBinary
-	default:
-		Acceptor.TransportProtocol.Receive = TransportProtocolText
-	}
-	switch viper.GetString("initiator.transportProtocol.send") {
-	case TransportProtocolBinary:
-		Initiator.TransportProtocol.Send = TransportProtocolBinary
-	default:
-		Initiator.TransportProtocol.Send = TransportProtocolText
-	}
-	switch viper.GetString("initiator.transportProtocol.receive") {
-	case TransportProtocolBinary:
-		Initiator.TransportProtocol.Receive = TransportProtocolBinary
-	default:
-		Initiator.TransportProtocol.Receive = TransportProtocolText
-	}
-
 	log.Printf("[gosocket][config]:\nAcceptor: %+v \nInitiator: %+v \n\n", Acceptor, Initiator)
+}
+
+func getVal(s string, ss []string, def string) (v string) {
+	exist := false
+	for _, val := range ss {
+		if val == s {
+			exist = true
+			break
+		}
+	}
+	v = def
+	if exist {
+		v = s
+	}
+	return
 }

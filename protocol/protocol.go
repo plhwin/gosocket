@@ -85,16 +85,16 @@ func cutFromRight(text string) (left, right string, err error) {
 }
 
 // Parse message ["$event",$args,"$identity"]
-func Decode(text []byte, transportProtocol string) (msg *Message, err error) {
+func Decode(text []byte, serializeType string) (msg *Message, err error) {
 	msg = new(Message)
 
-	if transportProtocol == conf.TransportProtocolBinary {
-		// transport protocol - binary
+	if serializeType == conf.TransportSerializeProtobuf {
+		// transport serialize - Protobuf
 		if err = proto.Unmarshal(text, msg); err != nil {
 			return
 		}
 	} else {
-		// transport protocol - text
+		// transport serialize - Text
 		var event, args string
 		if event, args, err = cutFromLeft(string(text)); err != nil {
 			return
@@ -119,7 +119,7 @@ func Decode(text []byte, transportProtocol string) (msg *Message, err error) {
 }
 
 // The message is sent to the client in the format of the agreed protocol
-func Encode(event string, args interface{}, id, transportProtocol string) (msg []byte, err error) {
+func Encode(event string, args interface{}, id, serializeType string) (msg []byte, err error) {
 	if event == "" {
 		err = errors.New("event can not be empty")
 		return
@@ -135,8 +135,8 @@ func Encode(event string, args interface{}, id, transportProtocol string) (msg [
 		argStr = string(argBytes)
 	}
 
-	if transportProtocol == conf.TransportProtocolBinary {
-		// transport protocol - binary
+	if serializeType == conf.TransportSerializeProtobuf {
+		// transport serialize - Protobuf
 		message := new(Message)
 		message.Event = event
 		message.Args = argStr
@@ -146,7 +146,7 @@ func Encode(event string, args interface{}, id, transportProtocol string) (msg [
 			return
 		}
 	} else {
-		// transport protocol - text
+		// transport serialize - Text
 		body := "\"" + event + "\""
 		if argStr != "" {
 			body += "," + argStr
