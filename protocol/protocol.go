@@ -11,6 +11,16 @@ import (
 	"github.com/plhwin/gosocket/conf"
 )
 
+var (
+	// compressors supported
+	Compressors = map[string]Compressor{
+		conf.TransportCompressNone:   new(RawDataCompressor),
+		conf.TransportCompressSnappy: new(SnappyCompressor),
+		conf.TransportCompressFLate:  new(FLateCompressor),
+		conf.TransportCompressGzip:   new(GzipCompressor),
+	}
+)
+
 type counter struct {
 	start      int
 	end        int
@@ -85,8 +95,13 @@ func cutFromRight(text string) (left, right string, err error) {
 }
 
 // Parse message ["$event",$args,"$identity"]
-func Decode(text []byte, serializeType string) (msg *Message, err error) {
+func Decode(text []byte, serializeType, compressType string) (msg *Message, err error) {
 	msg = new(Message)
+
+	// compress - Unzip: before Decode
+	if text, err = Compressors[compressType].Unzip(text); err != nil {
+		return
+	}
 
 	if serializeType == conf.TransportSerializeProtobuf {
 		// transport serialize - Protobuf
@@ -119,7 +134,7 @@ func Decode(text []byte, serializeType string) (msg *Message, err error) {
 }
 
 // The message is sent to the client in the format of the agreed protocol
-func Encode(event string, args interface{}, id, serializeType string) (msg []byte, err error) {
+func Encode(event string, args interface{}, id, serializeType, compressType string) (msg []byte, err error) {
 	if event == "" {
 		err = errors.New("event can not be empty")
 		return
@@ -156,7 +171,9 @@ func Encode(event string, args interface{}, id, serializeType string) (msg []byt
 		}
 		msg = []byte("[" + body + "]")
 	}
-	return
+
+	// compress - zip: after Encode
+	return Compressors[compressType].Zip(msg)
 }
 
 // 数据封包 - 前4个字节是消息长度，后面是消息内容

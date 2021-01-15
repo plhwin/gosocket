@@ -5,10 +5,10 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/plhwin/gosocket/conf"
+
 	"github.com/plhwin/gosocket/protocol"
 )
-
-var transportProtocol = "binary"
 
 func TestZipAndUnZip(t *testing.T) {
 	size := 2
@@ -22,7 +22,7 @@ func TestZipAndUnZip(t *testing.T) {
 		//args += fmt.Sprintf("%d", i)
 		id := fmt.Sprintf("JDSKJXARU8X384JXld83jxX9D2j37xK%d", i)
 
-		msg, _ := protocol.Encode("quote-fix", args, id, transportProtocol)
+		msg, _ := protocol.Encode("quote-fix", args, id, conf.TransportSerializeProtobuf, conf.TransportCompressNone)
 
 		//msg, _ = EnPack(msg)
 
@@ -35,7 +35,7 @@ func TestZipAndUnZip(t *testing.T) {
 		fmt.Println("gzip size:", err, len(b))
 
 		m, err2 := Unzip(b)
-		message, err3 := protocol.Decode(m, transportProtocol)
+		message, err3 := protocol.Decode(m, conf.TransportSerializeProtobuf, conf.TransportCompressNone)
 
 		fmt.Println("ungzip size:", err, err2, err3, len(m), message)
 	}

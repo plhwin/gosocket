@@ -127,7 +127,7 @@ func (c *Client) write() {
 			}
 			timeNow := time.Now()
 			millisecond := timeNow.UnixNano() / int64(time.Millisecond)
-			if msg, err := protocol.Encode(gosocket.EventPing, millisecond, "", conf.Acceptor.Transport.Send.Serialize); err == nil {
+			if msg, err := protocol.Encode(gosocket.EventPing, millisecond, "", conf.Acceptor.Transport.Send.Serialize, conf.Acceptor.Transport.Send.Compress); err == nil {
 				if err := c.conn.WriteMessage(messageType, msg); err != nil {
 					return
 				}
@@ -163,7 +163,7 @@ func (c *Client) read(face ClientFace) {
 
 func (c *Client) process(face ClientFace, msg []byte) {
 	// parse the message to determine what the client connection wants to do
-	message, err := protocol.Decode(msg, conf.Acceptor.Transport.Receive.Serialize)
+	message, err := protocol.Decode(msg, conf.Acceptor.Transport.Receive.Serialize, conf.Acceptor.Transport.Receive.Compress)
 	if err != nil {
 		log.Println("[WebSocket][client][read] msg decode error:", err, msg, string(msg), c.Id(), c.RemoteAddr())
 		return
