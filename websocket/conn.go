@@ -8,7 +8,6 @@ import (
 	"github.com/plhwin/gosocket/conf"
 
 	"github.com/plhwin/gosocket"
-	"github.com/plhwin/gosocket/protocol"
 )
 
 type ConnFace interface {
@@ -59,7 +58,7 @@ func (c *Conn) read(face ConnFace) {
 			log.Println("[WebSocket][conn][read] connection read error:", err, c.conn.LocalAddr(), "|", messageType, "|", msg, "|", string(msg), "|", c.Id(), c.RemoteAddr())
 			break
 		}
-		message, decodeErr := protocol.Decode(msg, conf.Initiator.Transport.Receive.Serialize, conf.Initiator.Transport.Receive.Compress)
+		message, decodeErr := c.Initiator().Decode(msg, conf.Initiator.Transport.Receive.Serialize, conf.Initiator.Transport.Receive.Compress)
 		if decodeErr != nil {
 			log.Println("[WebSocket][conn][read] protocol Decode error:", decodeErr, msg, string(msg), c.Id(), c.RemoteAddr())
 			continue

@@ -1,4 +1,4 @@
-package protocol
+package test
 
 import (
 	"bytes"
@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/plhwin/gosocket/protocol"
 
 	"github.com/plhwin/gosocket/conf"
 
@@ -37,7 +39,7 @@ type Args struct {
 }
 
 func TestProtobuf(t *testing.T) {
-	msg := &Message{
+	msg := &protocol.Message{
 		Event: "event:req",
 		Args:  `{"result":true,"message":"ok","data":{"a":1,"b":"b","c":1.02,"d":false}}`,
 		Id:    "0OZAnMtGfvroGnDCusTPdiM7r1CPocUv",
@@ -57,7 +59,7 @@ func TestProtobuf(t *testing.T) {
 	data = bytes.TrimSuffix(data, []byte{msgEnd})
 	fmt.Println("datarem:", data)
 
-	msgNew := new(Message)
+	msgNew := new(protocol.Message)
 	err = proto.Unmarshal(data, msgNew)
 	if err != nil {
 		fmt.Println("unmarshal err:", err)
@@ -67,6 +69,9 @@ func TestProtobuf(t *testing.T) {
 }
 
 func TestEncodeAndDecode(t *testing.T) {
+	var p protocol.Protocol
+	p.SetProtocol(new(protocol.DefaultTextProtocol))
+
 	// "kline",{"id":"VsL7ZQOTe60hM_GYvtc8","args":{"server":1,"token":"","symbol":"EURUSD","period":"M1","from":1590422400,"to":0,"count":300}},"DtUwOg67X4V6AHHXOPxvYwWwM6we3RWU"
 	event := "kline"
 	args := `{"server":1,"token":"","symbol":"EURUSD","period":"M1","from":1590422400,"to":0,"count":300}`
@@ -83,7 +88,7 @@ func TestEncodeAndDecode(t *testing.T) {
 	fmt.Printf("req: %+v %+v %+v \n\n", req, event, id)
 
 	var msg []byte
-	msg, err = Encode(event, req, id, conf.TransportSerializeProtobuf, conf.TransportCompressNone)
+	msg, err = p.Encode(event, req, id, conf.TransportSerializeProtobuf, conf.TransportCompressNone)
 	if err != nil {
 		fmt.Println("Encode error:", err, event, req, id)
 		os.Exit(2)
@@ -97,8 +102,8 @@ func TestEncodeAndDecode(t *testing.T) {
 	msg = bytes.TrimSuffix(msg, []byte{msgEnd})
 	fmt.Println("msgrem:", msg)
 
-	var message *Message
-	message, err = Decode(msg, conf.TransportSerializeProtobuf, conf.TransportCompressNone)
+	var message *protocol.Message
+	message, err = p.Decode(msg, conf.TransportSerializeProtobuf, conf.TransportCompressNone)
 	if err != nil {
 		fmt.Println("Decode error:", err, event, req, id)
 		os.Exit(3)

@@ -1,9 +1,11 @@
-package util
+package test
 
 import (
 	fmt "fmt"
 	"strconv"
 	"testing"
+
+	"github.com/plhwin/gosocket/util"
 
 	"github.com/plhwin/gosocket/conf"
 
@@ -11,6 +13,9 @@ import (
 )
 
 func TestZipAndUnZip(t *testing.T) {
+	var p protocol.Protocol
+	p.SetProtocol(new(protocol.DefaultTextProtocol))
+
 	size := 2
 	datasSlice := make([][]byte, size)
 	for i := 0; i < size; i++ {
@@ -22,7 +27,7 @@ func TestZipAndUnZip(t *testing.T) {
 		//args += fmt.Sprintf("%d", i)
 		id := fmt.Sprintf("JDSKJXARU8X384JXld83jxX9D2j37xK%d", i)
 
-		msg, _ := protocol.Encode("quote-fix", args, id, conf.TransportSerializeProtobuf, conf.TransportCompressNone)
+		msg, _ := p.Encode("quote-fix", args, id, conf.TransportSerializeProtobuf, conf.TransportCompressNone)
 
 		//msg, _ = EnPack(msg)
 
@@ -31,11 +36,11 @@ func TestZipAndUnZip(t *testing.T) {
 	}
 
 	for i := 0; i < size; i++ {
-		b, err := Zip(datasSlice[i])
+		b, err := util.Zip(datasSlice[i])
 		fmt.Println("gzip size:", err, len(b))
 
-		m, err2 := Unzip(b)
-		message, err3 := protocol.Decode(m, conf.TransportSerializeProtobuf, conf.TransportCompressNone)
+		m, err2 := util.Unzip(b)
+		message, err3 := p.Decode(m, conf.TransportSerializeProtobuf, conf.TransportCompressNone)
 
 		fmt.Println("ungzip size:", err, err2, err3, len(m), message)
 	}

@@ -12,8 +12,6 @@ import (
 	"time"
 
 	"github.com/plhwin/gosocket/conf"
-
-	"github.com/plhwin/gosocket/protocol"
 )
 
 type ClientFace interface {
@@ -133,7 +131,7 @@ func (c *Client) Emit(event string, args interface{}, id string) {
 			log.Println("gosocket client emit panic: ", r, c.Id(), c.RemoteAddr())
 		}
 	}()
-	msg, err := protocol.Encode(event, args, id, conf.Acceptor.Transport.Send.Serialize, conf.Acceptor.Transport.Send.Compress)
+	msg, err := c.Acceptor().Encode(event, args, id, conf.Acceptor.Transport.Send.Serialize, conf.Acceptor.Transport.Send.Compress)
 	if err != nil {
 		log.Println("[GoSocket][Emit] encode error:", err, event, args, id, c.Id(), c.RemoteAddr())
 		return

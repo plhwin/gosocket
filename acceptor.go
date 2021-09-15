@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/plhwin/gosocket/protocol"
+
 	"github.com/plhwin/gosocket/conf"
 )
 
@@ -14,6 +16,7 @@ func NewAcceptor() (a *Acceptor) {
 	a.initRooms()
 	a.initClients()
 	a.onConnection = a.onConn
+	a.SetProtocol(nil) // set default protocol
 
 	a.On(EventPing, a.ping)
 	a.On(EventPong, a.pong)
@@ -22,6 +25,7 @@ func NewAcceptor() (a *Acceptor) {
 
 type Acceptor struct {
 	events
+	protocol.Protocol
 	rooms   *rooms
 	clients *sync.Map // map[string]ClientFace
 	join    chan ClientFace

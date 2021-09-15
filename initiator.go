@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/plhwin/gosocket/protocol"
+
 	"github.com/plhwin/gosocket/conf"
 )
 
@@ -12,6 +14,7 @@ func NewInitiator() (i *Initiator) {
 	i = new(Initiator)
 	i.initEvents()
 	i.onDisconnection = i.onDisConn
+	i.SetProtocol(nil) // set default protocol
 
 	i.On(EventSocketId, i.socketId)
 	i.On(EventPing, i.ping)
@@ -21,6 +24,7 @@ func NewInitiator() (i *Initiator) {
 
 type Initiator struct {
 	events
+	protocol.Protocol
 	conn  ConnFace
 	alive bool
 	mu    sync.RWMutex // mutex

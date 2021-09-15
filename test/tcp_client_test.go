@@ -1,4 +1,4 @@
-package tcpsocket
+package test
 
 import (
 	"bytes"

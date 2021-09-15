@@ -5,14 +5,13 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
-	"strings"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/plhwin/gosocket/conf"
 )
 
 var (
-	// compressors supported
+	// Compressors supported
 	Compressors = map[string]Compressor{
 		conf.TransportCompressNone:   new(RawDataCompressor),
 		conf.TransportCompressSnappy: new(SnappyCompressor),
@@ -21,81 +20,53 @@ var (
 	}
 )
 
-type counter struct {
-	start      int
-	end        int
-	rest       int
-	countQuote int
+type Protocol struct {
+	textProtocol TextProtocol
 }
 
-func (c *counter) count(i int, s int32) (done bool, err error) {
-	if s == '"' {
-		switch c.countQuote {
-		case 0:
-			c.start = i + 1
-		case 1:
-			c.end = i
-			c.rest = i + 1
-		default:
-			err = errors.New("wrong message quote")
-			return
-		}
-		c.countQuote++
+func (p *Protocol) SetProtocol(textProtocol TextProtocol) {
+	if textProtocol == nil {
+		textProtocol = new(DefaultTextProtocol)
 	}
-	if s == ',' {
-		if c.countQuote == 2 {
-			c.rest = i + 1
-			done = true
-		}
-	}
-	return
+	p.textProtocol = textProtocol
 }
 
-func cutFromLeft(text string) (left, right string, err error) {
-	var c counter
-	// loop from left to right
-	for i, s := range text {
-		var done bool
-		if done, err = c.count(i, s); err != nil {
-			return
-		}
-		if done {
-			break
-		}
-	}
-	if (c.end < c.start) || (c.rest >= len(text)) {
-		err = errors.New("wrong message len")
+// Encode message before send to socket server
+func (p *Protocol) Encode(event string, args interface{}, id, serializeType, compressType string) (msg []byte, err error) {
+	if event == "" {
+		err = errors.New("event can not be empty")
 		return
 	}
-	left = text[c.start:c.end]
-	right = text[c.rest : len(text)-1]
-	return
-}
 
-func cutFromRight(text string) (left, right string, err error) {
-	var c counter
-	bytes := []rune(text)
-	// loop from right to left
-	for i := len(bytes) - 1; i >= 0; i-- {
-		var done bool
-		if done, err = c.count(i, bytes[i]); err != nil {
+	data := "" // interface to json string
+	if args != nil {
+		var b []byte
+		if b, err = json.Marshal(&args); err != nil {
 			return
 		}
-		if done {
-			break
+		data = string(b)
+	}
+
+	if serializeType == conf.TransportSerializeProtobuf {
+		// transport serialize - Protobuf
+		message := new(Message)
+		message.Event = event
+		message.Args = data
+		message.Id = id
+		if msg, err = proto.Marshal(message); err != nil {
+			return
 		}
+	} else {
+		// transport serialize - Text
+		msg = p.textProtocol.Encode(event, data, id)
 	}
-	if (c.end+1 > c.start-1) || (c.rest < 1) {
-		err = errors.New("wrong message len")
-		return
-	}
-	left = string(bytes[:c.rest-1])
-	right = string(bytes[c.end+1 : c.start-1])
-	return
+
+	// compress - zip: after Encode
+	return Compressors[compressType].Zip(msg)
 }
 
-// Parse message ["$event",$args,"$identity"]
-func Decode(text []byte, serializeType, compressType string) (msg *Message, err error) {
+// Decode message after received from socket server
+func (p *Protocol) Decode(text []byte, serializeType, compressType string) (msg *Message, err error) {
 	msg = new(Message)
 
 	// compress - Unzip: before Decode
@@ -110,73 +81,15 @@ func Decode(text []byte, serializeType, compressType string) (msg *Message, err 
 		}
 	} else {
 		// transport serialize - Text
-		var event, args string
-		if event, args, err = cutFromLeft(string(text)); err != nil {
+		if err = p.textProtocol.Decode(text, msg); err != nil {
 			return
-		}
-		if event == "" {
-			err = errors.New("wrong message format")
-			return
-		}
-		msg.Event, msg.Args = event, args
-		// if end with "(quote), it is possible to carry the client id
-		// it means that the data type of the client id must be a string
-		if strings.HasSuffix(msg.Args, "\"") {
-			if left, right, cutErr := cutFromRight(msg.Args); cutErr == nil {
-				if msg.Args != "\""+right+"\"" {
-					msg.Args = left
-					msg.Id = right
-				}
-			}
 		}
 	}
 	return
 }
 
-// The message is sent to the client in the format of the agreed protocol
-func Encode(event string, args interface{}, id, serializeType, compressType string) (msg []byte, err error) {
-	if event == "" {
-		err = errors.New("event can not be empty")
-		return
-	}
-
-	// args: interface to json string
-	argStr := ""
-	if args != nil {
-		var argBytes []byte
-		if argBytes, err = json.Marshal(&args); err != nil {
-			return
-		}
-		argStr = string(argBytes)
-	}
-
-	if serializeType == conf.TransportSerializeProtobuf {
-		// transport serialize - Protobuf
-		message := new(Message)
-		message.Event = event
-		message.Args = argStr
-		message.Id = id
-
-		if msg, err = proto.Marshal(message); err != nil {
-			return
-		}
-	} else {
-		// transport serialize - Text
-		body := "\"" + event + "\""
-		if argStr != "" {
-			body += "," + argStr
-		}
-		if id != "" {
-			body += ",\"" + id + "\""
-		}
-		msg = []byte("[" + body + "]")
-	}
-
-	// compress - zip: after Encode
-	return Compressors[compressType].Zip(msg)
-}
-
-// 数据封包 - 前4个字节是消息长度，后面是消息内容
+// EnPack 数据封包
+// 前4个字节是消息长度，后面是消息内容
 func EnPack(buf []byte) (pkg *bytes.Buffer, err error) {
 	pkg = new(bytes.Buffer)
 
@@ -197,7 +110,7 @@ func EnPack(buf []byte) (pkg *bytes.Buffer, err error) {
 	return
 }
 
-// 数据解包
+// DePack 数据解包
 // 数据解包传递过来的buf来自于接收端的io字节流，这个buf存在以下两种情况：
 // 情况1：本次解包data中未能解析出至少一条正常协议数据，
 // 这表示当前buf尚不足以按照传输协议解析出一条完整的消息，应等待下一次读取拼接字节流后再尝试；
