@@ -75,6 +75,7 @@ type room struct {
 
 type initiator struct {
 	Transport transport
+	Websocket websocket
 	Logs      logs
 }
 
@@ -134,6 +135,9 @@ func initConf() {
 				Serialize: getVal(viper.GetString("initiator.transport.receive.serialize"), serializations, TransportSerializeText),
 				Compress:  getVal(viper.GetString("initiator.transport.receive.compress"), compresses, TransportCompressNone),
 			},
+		},
+		Websocket: websocket{
+			MessageType: getVal(viper.GetString("initiator.websocket.messageType"), websocketMessageTypes, WebsocketMessageTypeText),
 		},
 		Logs: logs{
 			Heartbeat: heartbeatLogs{

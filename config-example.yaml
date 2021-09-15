@@ -2,10 +2,10 @@ acceptor:
   transport:
     send:
       serialize: "Text" # Text or Protobuf, as a acceptor, which serialize type is used to send message, the default value is Text
-      compress: "None" # None,Snappy,FLate,Gzip, the more higher compression rate, means the higher demand for CPU, and the lower demand for bandwidth, the default value is None
+      compress: "None" # None,Snappy,FLate,Gzip, the higher compression rate, means the higher demand for CPU, and the lower demand for bandwidth, the default value is None
     receive:
       serialize: "Text" # Text or Protobuf, as a acceptor, which serialize type is used to receive message , the default value is Text
-      compress: "None" # None,Snappy,FLate,Gzip, the more higher compression rate, means the higher demand for CPU, and the lower demand for bandwidth, the default value is None
+      compress: "None" # None,Snappy,FLate,Gzip, the higher compression rate, means the higher demand for CPU, and the lower demand for bandwidth, the default value is None
   websocket: # acceptor websocket specific configuration
     messageType: "Text" # Text or Binary, which type is used to send message, the default value is Text
     remoteAddrHeaderName: "" # Use custom header name and controlled by the developers to avoid fake IP, if using proxy
@@ -14,7 +14,7 @@ acceptor:
     pingMaxTimes: 2 # When N times of ping messages are continuously sent to the client, but the client did not reply to any of these messages, the server actively disconnects, which needs to be set to a positive integer greater than 0, the default value is 2
   logs:
     heartbeat:
-      pingSend: true # Server send a ping message to the client
+      pingSend: true # Server sends a ping message to the client
       pingSendPrintDelay: 0 # Unit:ms, Only print logs longer than x milliseconds, the default value is 0
       pingReceive: true # Receive ping message from client
       pongReceive: true # Receive pong message from client
@@ -26,10 +26,12 @@ initiator:
   transport:
     send:
       serialize: "Text" # Text or Protobuf, as a initiator, which serialize type is used to send message, the default value is Text
-      compress: "None" # None,Snappy,FLate,Gzip, the more higher compression rate, means the higher demand for CPU, and the lower demand for bandwidth, the default value is None
+      compress: "None" # None,Snappy,FLate,Gzip, the higher compression rate, means the higher demand for CPU, and the lower demand for bandwidth, the default value is None
     receive:
       serialize: "Text" # Text or Protobuf, as a initiator, which serialize type is used to receive message , the default value is Text
-      compress: "None" # None,Snappy,FLate,Gzip, the more higher compression rate, means the higher demand for CPU, and the lower demand for bandwidth, the default value is None
+      compress: "None" # None,Snappy,FLate,Gzip, the higher compression rate, means the higher demand for CPU, and the lower demand for bandwidth, the default value is None
+  websocket: # initiator websocket specific configuration
+    messageType: "Text" # Text or Binary, which type is used to send message, the default value is Text
   logs:
     heartbeat: # The current heartbeat mode is: server send a ping message to the client, and the client must reply a pong message
       pingReceive: true # Receive ping message from server
