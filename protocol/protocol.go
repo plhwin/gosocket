@@ -58,7 +58,9 @@ func (p *Protocol) Encode(event string, args interface{}, id, serializeType, com
 		}
 	} else {
 		// transport serialize - Text
-		msg = p.textProtocol.Encode(event, data, id)
+		if msg, err = p.textProtocol.Encode(event, data, id); err != nil {
+			return
+		}
 	}
 
 	// compress - zip: after Encode

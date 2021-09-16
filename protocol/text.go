@@ -7,7 +7,7 @@ import (
 
 // TextProtocol defines a common text of protocol interface.
 type TextProtocol interface {
-	Encode(string, string, string) []byte
+	Encode(string, string, string) ([]byte, error)
 	Decode([]byte, *Message) error
 }
 
@@ -15,7 +15,7 @@ type TextProtocol interface {
 type DefaultTextProtocol struct {
 }
 
-func (p *DefaultTextProtocol) Encode(event string, data, id string) []byte {
+func (p *DefaultTextProtocol) Encode(event string, data, id string) (message []byte, err error) {
 	body := `"` + event + `"`
 	if data != "" {
 		body += `,` + data
@@ -23,7 +23,8 @@ func (p *DefaultTextProtocol) Encode(event string, data, id string) []byte {
 	if id != "" {
 		body += `,"` + id + `"`
 	}
-	return []byte(`[` + body + `]`)
+	message = []byte(`[` + body + `]`)
+	return
 }
 
 // Decode Parse message as ["$event",$args,"$identity"]
