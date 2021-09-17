@@ -28,9 +28,8 @@ func (c *Conn) init(conn *websocket.Conn, i *gosocket.Initiator) {
 	c.Init(i)
 }
 
-func (c *Conn) Close(face ConnFace) {
+func (c *Conn) Close() {
 	c.conn.Close()
-	c.Initiator().CallGivenEvent(face, gosocket.OnDisconnection)
 }
 
 func Dial(urlStr string, requestHeader http.Header) (*websocket.Conn, *http.Response, error) {
@@ -51,7 +50,11 @@ func Receive(i *gosocket.Initiator, conn *websocket.Conn, c ConnFace) {
 }
 
 func (c *Conn) read(face ConnFace) {
-	defer c.Close(face)
+	defer func() {
+		c.Close()
+		c.Initiator().CallGivenEvent(face, gosocket.OnDisconnection)
+	}()
+
 	for {
 		messageType, msg, err := c.conn.ReadMessage()
 		if err != nil {
@@ -69,7 +72,8 @@ func (c *Conn) read(face ConnFace) {
 }
 
 func (c *Conn) write() {
-	defer c.conn.Close()
+	defer c.Close()
+
 	messageType := websocket.TextMessage
 	if conf.Initiator.Websocket.MessageType == conf.WebsocketMessageTypeBinary {
 		messageType = websocket.BinaryMessage

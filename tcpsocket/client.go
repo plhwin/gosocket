@@ -31,10 +31,8 @@ func (c *Client) init(conn net.Conn, a *gosocket.Acceptor) {
 	c.Init(a)
 }
 
-func (c *Client) Close(face ClientFace) {
+func (c *Client) Close() {
 	c.conn.Close()
-	c.LeaveAll()
-	c.Acceptor().CallGivenEvent(face, gosocket.OnDisconnection)
 }
 
 // handles socket requests from the peer
@@ -59,7 +57,7 @@ func (c *Client) write() {
 	ticker := time.NewTicker(time.Duration(conf.Acceptor.Heartbeat.PingInterval) * time.Second)
 	defer func() {
 		ticker.Stop()
-		c.conn.Close()
+		c.Close()
 		// Give a signal to the sender(Emit)
 		// Here is the consumer program of the channel c.Out()
 		// Can not close c.Out() here
@@ -122,7 +120,9 @@ func (c *Client) write() {
 
 func (c *Client) read(face ClientFace) {
 	defer func() {
-		c.Close(face)
+		c.Close()
+		c.LeaveAll()
+		c.Acceptor().CallGivenEvent(face, gosocket.OnDisconnection)
 	}()
 
 	buf := make([]byte, 0, 4096) // 临时缓冲区的buffer

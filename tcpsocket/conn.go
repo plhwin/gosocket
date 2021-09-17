@@ -29,9 +29,8 @@ func (c *Conn) init(conn net.Conn, i *gosocket.Initiator) {
 	c.Init(i)
 }
 
-func (c *Conn) Close(face ConnFace) {
+func (c *Conn) Close() {
 	c.conn.Close()
-	c.Initiator().CallGivenEvent(face, gosocket.OnDisconnection)
 }
 
 // as a initiator, receive message from tcp socket server
@@ -43,7 +42,10 @@ func Receive(i *gosocket.Initiator, conn net.Conn, c ConnFace) {
 }
 
 func (c *Conn) read(face ConnFace) {
-	defer c.Close(face)
+	defer func() {
+		c.Close()
+		c.Initiator().CallGivenEvent(face, gosocket.OnDisconnection)
+	}()
 
 	buf := make([]byte, 0, 4096) // 临时缓冲区的buffer
 	readBuf := make([]byte, 256) // 每次读取多大buffer
@@ -80,7 +82,7 @@ func (c *Conn) read(face ConnFace) {
 }
 
 func (c *Conn) write() {
-	defer c.conn.Close()
+	defer c.Close()
 	for msg := range c.Out() {
 		pkg, err := protocol.EnPack(msg)
 		if err != nil {
