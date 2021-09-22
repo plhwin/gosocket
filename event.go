@@ -89,7 +89,7 @@ func (e *events) CallEvent(client interface{}, msg *protocol.Message) {
 		if msg.Args != "" {
 			msg.Args = strings.Trim(msg.Args, " ")
 			if err := json.Unmarshal([]byte(msg.Args), &args); err != nil {
-				log.Println("json decode error:", msg.Args, args)
+				log.Println("json decode error:", msg.Args, args, err)
 				// if decode error, not return here
 				// The second parameter of the event processing function will be zero value,
 				// suggest that your system handles it yourself
