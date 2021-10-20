@@ -1,10 +1,10 @@
 acceptor:
   transport:
     send:
-      serialize: "Text" # Text or Protobuf, as a acceptor, which serialize type is used to send message, the default value is Text
+      serialize: "Text" # Text or Protobuf, as an acceptor, which serialize type is used to send message, the default value is Text
       compress: "None" # None,Snappy,FLate,Gzip, the higher compression rate, means the higher demand for CPU, and the lower demand for bandwidth, the default value is None
     receive:
-      serialize: "Text" # Text or Protobuf, as a acceptor, which serialize type is used to receive message , the default value is Text
+      serialize: "Text" # Text or Protobuf, as an acceptor, which serialize type is used to receive message , the default value is Text
       compress: "None" # None,Snappy,FLate,Gzip, the higher compression rate, means the higher demand for CPU, and the lower demand for bandwidth, the default value is None
   websocket: # acceptor websocket specific configuration
     messageType: "Text" # Text or Binary, which type is used to send message, the default value is Text
@@ -25,10 +25,10 @@ acceptor:
 initiator:
   transport:
     send:
-      serialize: "Text" # Text or Protobuf, as a initiator, which serialize type is used to send message, the default value is Text
+      serialize: "Text" # Text or Protobuf, as an initiator, which serialize type is used to send message, the default value is Text
       compress: "None" # None,Snappy,FLate,Gzip, the higher compression rate, means the higher demand for CPU, and the lower demand for bandwidth, the default value is None
     receive:
-      serialize: "Text" # Text or Protobuf, as a initiator, which serialize type is used to receive message , the default value is Text
+      serialize: "Text" # Text or Protobuf, as an initiator, which serialize type is used to receive message , the default value is Text
       compress: "None" # None,Snappy,FLate,Gzip, the higher compression rate, means the higher demand for CPU, and the lower demand for bandwidth, the default value is None
   websocket: # initiator websocket specific configuration
     messageType: "Text" # Text or Binary, which type is used to send message, the default value is Text
