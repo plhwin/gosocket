@@ -5,9 +5,8 @@ import (
 	"compress/flate"
 	"compress/gzip"
 	"fmt"
-	"io/ioutil"
-
 	"github.com/golang/snappy"
+	"io"
 )
 
 // zip data by gzip
@@ -38,7 +37,7 @@ func Unzip(buf []byte) (data []byte, err error) {
 		return
 	}
 	defer r.Close()
-	return ioutil.ReadAll(r)
+	return io.ReadAll(r)
 }
 
 // zip data by FLate
@@ -62,7 +61,7 @@ func ZipFLate(buf []byte) (data []byte, err error) {
 func UnzipFLate(buf []byte) (data []byte, err error) {
 	r := flate.NewReader(bytes.NewBuffer(buf))
 	defer r.Close()
-	return ioutil.ReadAll(r)
+	return io.ReadAll(r)
 }
 
 func ZipSnappy(data []byte) ([]byte, error) {
@@ -91,7 +90,7 @@ func UnzipSnappy(data []byte) ([]byte, error) {
 	}
 
 	reader := snappy.NewReader(bytes.NewReader(data))
-	out, err := ioutil.ReadAll(reader)
+	out, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, err
 	}

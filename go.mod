@@ -5,7 +5,7 @@ go 1.22
 toolchain go1.24.2
 
 require (
-	github.com/golang/snappy v0.0.2
+	github.com/golang/snappy v1.0.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/spf13/viper v1.7.0
 	google.golang.org/protobuf v1.36.6
