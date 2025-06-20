@@ -12,7 +12,7 @@ import (
 
 	"github.com/plhwin/gosocket/conf"
 
-	"github.com/gogo/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 const (

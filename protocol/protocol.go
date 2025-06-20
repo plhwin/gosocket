@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/plhwin/gosocket/conf"
+	"google.golang.org/protobuf/proto"
 )
 
 var (
