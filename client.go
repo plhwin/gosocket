@@ -2,6 +2,7 @@ package gosocket
 
 import (
 	"bytes"
+	"context"
 	"crypto/md5"
 	"encoding/base64"
 	"fmt"
@@ -15,11 +16,12 @@ import (
 )
 
 type ClientFace interface {
-	Init(*Acceptor)                                          // init the client
+	Init(context.Context, *Acceptor)                         // init the client
+	Ctx() context.Context                                    // context
 	Emit(string, interface{}, string)                        // send message to socket client
 	EmitByInitiator(*Initiator, string, interface{}, string) // send message to socket server by initiator instance
-	Join(room string)                                        // client join a room
-	Leave(room string)                                       // client leave a room
+	Join(string)                                             // client join a room
+	Leave(string)                                            // client leave a room
 	LeaveAll()                                               // client leave all of the rooms
 	Id() string                                              // get the client id
 	RemoteAddr() net.Addr                                    // the ip:port of client
@@ -36,18 +38,20 @@ type ClientFace interface {
 }
 
 type Client struct {
-	id         string         // client id
-	remoteAddr net.Addr       // client remoteAddr
-	acceptor   *Acceptor      // event processing function register
-	rooms      *sync.Map      // map[string]bool all rooms joined by the client, used to quickly join and leave the rooms
-	out        chan []byte    // message send channel
-	stopOut    chan bool      // stop send message signal channel
-	ping       map[int64]bool // ping
-	mu         sync.RWMutex   // mutex
-	delay      int64          // delay
+	ctx        context.Context // context: websocket=from http request, tcpsocket=nil
+	id         string          // client id
+	remoteAddr net.Addr        // client remoteAddr
+	acceptor   *Acceptor       // event processing function register
+	rooms      *sync.Map       // map[string]bool all rooms joined by the client, used to quickly join and leave the rooms
+	out        chan []byte     // message send channel
+	stopOut    chan bool       // stop send message signal channel
+	ping       map[int64]bool  // ping
+	mu         sync.RWMutex    // mutex
+	delay      int64           // delay
 }
 
-func (c *Client) Init(a *Acceptor) {
+func (c *Client) Init(ctx context.Context, a *Acceptor) {
+	c.ctx = ctx
 	c.id = c.genId()
 	c.acceptor = a
 	// set a capacity N for the data transmission pipeline as a buffer.
@@ -57,6 +61,10 @@ func (c *Client) Init(a *Acceptor) {
 	c.stopOut = make(chan bool)
 	c.rooms = new(sync.Map)
 	c.ping = make(map[int64]bool)
+}
+
+func (c *Client) Ctx() context.Context {
+	return c.ctx
 }
 
 func (c *Client) Id() string {

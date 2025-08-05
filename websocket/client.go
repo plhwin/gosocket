@@ -40,7 +40,7 @@ func (c *Client) init(conn *websocket.Conn, a *gosocket.Acceptor, r *http.Reques
 	// Set remoteAddr: Consider proxy
 	// Use custom header name and controlled by the developers to avoid fake IP
 	// Only set the name when the proxy is turned on
-	// The header value should be contains two parts, the format is ip:port
+	// The header value should be contained two parts, the format is ip:port
 	remoteAddr := conn.RemoteAddr()
 	if conf.Acceptor.Websocket.RemoteAddrHeaderName != "" {
 		if remoteAddrStr := r.Header.Get(conf.Acceptor.Websocket.RemoteAddrHeaderName); remoteAddrStr != "" {
@@ -52,14 +52,14 @@ func (c *Client) init(conn *websocket.Conn, a *gosocket.Acceptor, r *http.Reques
 		}
 	}
 	c.SetRemoteAddr(remoteAddr)
-	c.Init(a)
+	c.Init(r.Context(), a)
 }
 
 func (c *Client) Close() {
 	c.conn.Close()
 }
 
-// handles websocket requests from the peer
+// Serve handles websocket requests from the peer
 func Serve(a *gosocket.Acceptor, w http.ResponseWriter, r *http.Request, c ClientFace) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {

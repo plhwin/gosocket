@@ -17,10 +17,7 @@ const (
 	EventPong       = "pong"
 )
 
-/*
-*
-System handler function for internal event processing
-*/
+// systemHandler function for internal event processing
 type systemHandler func(c interface{})
 
 type events struct {
@@ -44,10 +41,9 @@ func (e *events) On(event string, f interface{}) {
 	e.messageHandlersLock.Lock()
 	defer e.messageHandlersLock.Unlock()
 	e.messageHandlers[event] = c
-
 }
 
-// find the event handler function from the map of event handler functions registered to the system
+// findEvent find the event handler function from the map of event handler functions registered to the system
 func (e *events) findEvent(event string) (*caller, bool) {
 	e.messageHandlersLock.RLock()
 	defer e.messageHandlersLock.RUnlock()
@@ -70,7 +66,7 @@ func (e *events) CallGivenEvent(c interface{}, event string) {
 	f.callFunc(c, &struct{}{}, "")
 }
 
-// call event processing function by incoming message
+// CallEvent call event processing function by incoming message
 func (e *events) CallEvent(client interface{}, msg *protocol.Message) {
 	f, ok := e.findEvent(msg.Event)
 	if !ok {

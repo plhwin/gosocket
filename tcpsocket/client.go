@@ -28,14 +28,14 @@ type Client struct {
 func (c *Client) init(conn net.Conn, a *gosocket.Acceptor) {
 	c.conn = conn
 	c.SetRemoteAddr(conn.RemoteAddr())
-	c.Init(a)
+	c.Init(nil, a) // net.Conn do not have context
 }
 
 func (c *Client) Close() {
 	c.conn.Close()
 }
 
-// handles socket requests from the peer
+// Serve handles socket requests from the peer
 func Serve(conn net.Conn, a *gosocket.Acceptor, c ClientFace) {
 	// init tcp socket
 	c.init(conn, a)
