@@ -17,7 +17,8 @@ const (
 	EventPong       = "pong"
 )
 
-/**
+/*
+*
 System handler function for internal event processing
 */
 type systemHandler func(c interface{})
@@ -33,18 +34,17 @@ func (e *events) initEvents() {
 	e.messageHandlers = make(map[string]*caller)
 }
 
-// bind the event processing function
-func (e *events) On(event string, f interface{}) error {
+// On bind the event processing function
+func (e *events) On(event string, f interface{}) {
 	c, err := newCaller(f)
 	if err != nil {
-		return err
+		log.Fatalln("register func error:", err)
 	}
 
 	e.messageHandlersLock.Lock()
 	defer e.messageHandlersLock.Unlock()
 	e.messageHandlers[event] = c
 
-	return nil
 }
 
 // find the event handler function from the map of event handler functions registered to the system
