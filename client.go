@@ -16,13 +16,16 @@ import (
 )
 
 type ClientFace interface {
-	Init(context.Context, *Acceptor)                         // init the client
-	Ctx() context.Context                                    // context
+	Init(*Acceptor)                                          // init the client
+	Context() context.Context                                // 获取连接上下文
+	SetConnCtx(context.Context)                              // 设置连接专用上下文
+	SetConnCancel(context.CancelFunc)                        // 设置连接上下文取消函数
+	CloseConnCtx()                                           // 安全关闭连接上下文
 	Emit(string, interface{}, string)                        // send message to socket client
 	EmitByInitiator(*Initiator, string, interface{}, string) // send message to socket server by initiator instance
 	Join(string)                                             // client join a room
 	Leave(string)                                            // client leave a room
-	LeaveAll()                                               // client leave all of the rooms
+	LeaveAll()                                               // client leave all the rooms
 	Id() string                                              // get the client id
 	RemoteAddr() net.Addr                                    // the ip:port of client
 	Acceptor() *Acceptor                                     // get *Acceptor
@@ -38,20 +41,23 @@ type ClientFace interface {
 }
 
 type Client struct {
-	ctx        context.Context // context: websocket=from http request, tcpsocket=nil
-	id         string          // client id
-	remoteAddr net.Addr        // client remoteAddr
-	acceptor   *Acceptor       // event processing function register
-	rooms      *sync.Map       // map[string]bool all rooms joined by the client, used to quickly join and leave the rooms
-	out        chan []byte     // message send channel
-	stopOut    chan bool       // stop send message signal channel
-	ping       map[int64]bool  // ping
-	mu         sync.RWMutex    // mutex
-	delay      int64           // delay
+	connCtx    context.Context    // 连接专用上下文
+	connCancel context.CancelFunc // 连接上下文取消函数
+	id         string             // client id
+	remoteAddr net.Addr           // client remoteAddr
+	acceptor   *Acceptor          // event processing function register
+	rooms      *sync.Map          // map[string]bool all rooms joined by the client, used to quickly join and leave the rooms
+	out        chan []byte        // message send channel
+	stopOut    chan bool          // stop send message signal channel
+	ping       map[int64]bool     // ping
+	mu         sync.RWMutex       // mutex
+	delay      int64              // delay
 }
 
-func (c *Client) Init(ctx context.Context, a *Acceptor) {
-	c.ctx = ctx
+func (c *Client) Init(a *Acceptor) {
+	// 创建连接专用上下文
+	c.connCtx, c.connCancel = context.WithCancel(context.Background())
+
 	c.id = c.genId()
 	c.acceptor = a
 	// set a capacity N for the data transmission pipeline as a buffer.
@@ -63,8 +69,25 @@ func (c *Client) Init(ctx context.Context, a *Acceptor) {
 	c.ping = make(map[int64]bool)
 }
 
-func (c *Client) Ctx() context.Context {
-	return c.ctx
+func (c *Client) Context() context.Context {
+	return c.connCtx
+}
+
+func (c *Client) SetConnCtx(ctx context.Context) {
+	c.connCtx = ctx
+}
+
+func (c *Client) SetConnCancel(cancel context.CancelFunc) {
+	c.connCancel = cancel
+}
+
+// CloseConnCtx 安全关闭连接上下文
+func (c *Client) CloseConnCtx() {
+	if c.connCancel != nil {
+		c.connCancel()
+	}
+	// 关闭通道
+	close(c.stopOut)
 }
 
 func (c *Client) Id() string {
@@ -80,12 +103,12 @@ func (c *Client) Acceptor() *Acceptor {
 }
 
 func (c *Client) Rooms() map[string]bool {
-	rooms := make(map[string]bool)
+	r := make(map[string]bool)
 	c.rooms.Range(func(k, v interface{}) bool {
-		rooms[k.(string)] = v.(bool)
+		r[k.(string)] = v.(bool)
 		return true
 	})
-	return rooms
+	return r
 }
 
 func (c *Client) Ping() map[int64]bool {
@@ -145,6 +168,9 @@ func (c *Client) Emit(event string, args interface{}, id string) {
 		return
 	}
 	select {
+	// 使用连接上下文检查取消状态
+	case <-c.Context().Done():
+		return // 连接已关闭，不再发送
 	case <-c.stopOut:
 		// close(c.out)
 		// The channel of c.out will close itself when there is no goroutine reference

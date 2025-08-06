@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"context"
 	"log"
 	"net"
 	"net/http"
@@ -17,7 +18,7 @@ import (
 
 type ClientFace interface {
 	gosocket.ClientFace
-	init(*websocket.Conn, *gosocket.Acceptor, *http.Request) // init the client
+	init(context.Context, *websocket.Conn, *gosocket.Acceptor, *http.Request) // init the client
 	read(ClientFace)
 	write()
 }
@@ -35,7 +36,7 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-func (c *Client) init(conn *websocket.Conn, a *gosocket.Acceptor, r *http.Request) {
+func (c *Client) init(baseCtx context.Context, conn *websocket.Conn, a *gosocket.Acceptor, r *http.Request) {
 	c.conn = conn
 	// Set remoteAddr: Consider proxy
 	// Use custom header name and controlled by the developers to avoid fake IP
@@ -51,23 +52,37 @@ func (c *Client) init(conn *websocket.Conn, a *gosocket.Acceptor, r *http.Reques
 			}
 		}
 	}
+
+	// 基于传入的基础上下文创建连接
+	connCtx, cancel := context.WithCancel(baseCtx)
+	c.Init(a) // 初始化客户端
+
+	// 设置连接上下文
+	c.SetConnCtx(connCtx)
+	c.SetConnCancel(cancel)
+
+	// 设置远程连接地址
 	c.SetRemoteAddr(remoteAddr)
-	c.Init(r.Context(), a)
+
 }
 
 func (c *Client) Close() {
+	// 先关闭连接上下文
+	c.CloseConnCtx()
+
+	// 再关闭网络连接
 	c.conn.Close()
 }
 
 // Serve handles websocket requests from the peer
-func Serve(a *gosocket.Acceptor, w http.ResponseWriter, r *http.Request, c ClientFace) {
+func Serve(baseCtx context.Context, a *gosocket.Acceptor, w http.ResponseWriter, r *http.Request, c ClientFace) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("[WebSocket][client][Serve] upgrade error:", err)
 		return
 	}
 
-	c.init(conn, a, r)
+	c.init(baseCtx, conn, a, r)
 
 	// add the ClientFace to acceptor
 	a.Join(c)
@@ -90,7 +105,7 @@ func (c *Client) write() {
 		// Give a signal to the sender(Emit)
 		// Here is the consumer program of the channel c.Out()
 		// Can not close c.Out() here
-		// c.Out() channel must be close by it's sender
+		// c.Out() channel must be close by its sender
 		close(c.StopOut())
 	}()
 

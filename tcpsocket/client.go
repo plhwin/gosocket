@@ -1,6 +1,7 @@
 package tcpsocket
 
 import (
+	"context"
 	"io"
 	"log"
 	"net"
@@ -15,7 +16,7 @@ import (
 
 type ClientFace interface {
 	gosocket.ClientFace
-	init(net.Conn, *gosocket.Acceptor) // init the client
+	init(context.Context, net.Conn, *gosocket.Acceptor) // init the client
 	read(ClientFace)
 	write()
 }
@@ -25,20 +26,32 @@ type Client struct {
 	conn net.Conn // tcp socket conn
 }
 
-func (c *Client) init(conn net.Conn, a *gosocket.Acceptor) {
+func (c *Client) init(baseCtx context.Context, conn net.Conn, a *gosocket.Acceptor) {
 	c.conn = conn
+
+	// 基于传入的基础上下文创建连接
+	connCtx, cancel := context.WithCancel(baseCtx)
+	c.Init(a) // 初始化客户端
+
+	// 设置连接上下文
+	c.SetConnCtx(connCtx)
+	c.SetConnCancel(cancel)
+
 	c.SetRemoteAddr(conn.RemoteAddr())
-	c.Init(nil, a) // net.Conn do not have context
 }
 
 func (c *Client) Close() {
+	// 先关闭连接上下文
+	c.CloseConnCtx()
+
+	// 再关闭网络连接
 	c.conn.Close()
 }
 
 // Serve handles socket requests from the peer
-func Serve(conn net.Conn, a *gosocket.Acceptor, c ClientFace) {
+func Serve(baseCtx context.Context, conn net.Conn, a *gosocket.Acceptor, c ClientFace) {
 	// init tcp socket
-	c.init(conn, a)
+	c.init(baseCtx, conn, a)
 
 	// add the ClientFace to acceptor
 	a.Join(c)
