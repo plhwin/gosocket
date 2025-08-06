@@ -16,7 +16,7 @@ import (
 )
 
 type ClientFace interface {
-	Init(*Acceptor)                                          // init the client
+	Init(context.Context, *Acceptor)                         // init the client
 	Context() context.Context                                // 获取连接上下文
 	SetConnCtx(context.Context)                              // 设置连接专用上下文
 	SetConnCancel(context.CancelFunc)                        // 设置连接上下文取消函数
@@ -54,9 +54,9 @@ type Client struct {
 	delay      int64              // delay
 }
 
-func (c *Client) Init(a *Acceptor) {
-	// 创建连接专用上下文
-	c.connCtx, c.connCancel = context.WithCancel(context.Background())
+func (c *Client) Init(baseCtx context.Context, a *Acceptor) {
+	// 基于传入的基础上下文,创建连接专用上下文
+	c.connCtx, c.connCancel = context.WithCancel(baseCtx)
 
 	c.id = c.genId()
 	c.acceptor = a
@@ -86,8 +86,6 @@ func (c *Client) CloseConnCtx() {
 	if c.connCancel != nil {
 		c.connCancel()
 	}
-	// 关闭通道
-	close(c.stopOut)
 }
 
 func (c *Client) Id() string {

@@ -53,17 +53,11 @@ func (c *Client) init(baseCtx context.Context, conn *websocket.Conn, a *gosocket
 		}
 	}
 
-	// 基于传入的基础上下文创建连接
-	connCtx, cancel := context.WithCancel(baseCtx)
-	c.Init(a) // 初始化客户端
-
-	// 设置连接上下文
-	c.SetConnCtx(connCtx)
-	c.SetConnCancel(cancel)
-
 	// 设置远程连接地址
 	c.SetRemoteAddr(remoteAddr)
 
+	// 初始化客户端
+	c.Init(baseCtx, a)
 }
 
 func (c *Client) Close() {
